@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -53,9 +54,17 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-2">
           AI LaTeX Editor
         </h1>
-        <p className="text-center text-gray-600 dark:text-gray-400 mb-8">
+        <p className="text-center text-gray-600 dark:text-gray-400 mb-4">
           Create beautiful documents with AI assistance
         </p>
+        
+        {/* Demo Link */}
+        <Link 
+          href="/demo"
+          className="block w-full py-2 text-center bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium mb-6 transition-colors"
+        >
+          ✨ Try Demo (No Login Required)
+        </Link>
         
         <div className="flex gap-2 mb-6">
           <button
