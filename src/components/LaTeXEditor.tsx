@@ -6,6 +6,7 @@ import { useMorphEditor } from '@/hooks/useMorphEditor';
 import { usePDFCompiler } from '@/hooks/usePDFCompiler';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import MorphChatPanel from './MorphChatPanel';
+import MorphProposalPanel from './MorphProposalPanel';
 import MonacoLaTeXEditor from './MonacoLaTeXEditor';
 
 type EditingMode = 'complete' | 'morph';
@@ -320,7 +321,7 @@ This document demonstrates various LaTeX features including mathematics, lists, 
               </div>
             </div>
           ) : (
-            /* Morph Diff Mode - Simplified chat panel without proposal display */
+            /* Morph Diff Mode - Chat + Proposal Panel */
             <div className="flex-1 flex flex-col">
               {/* Chat Messages Area */}
               <div className="flex-1 p-4 overflow-auto">
@@ -351,6 +352,16 @@ This document demonstrates various LaTeX features including mathematics, lists, 
                   )}
                 </div>
               </div>
+              
+              {/* Proposed Changes Panel */}
+              <MorphProposalPanel
+                changes={morphEditor.proposedChanges}
+                onApplyChange={morphEditor.applyChange}
+                onRejectChange={morphEditor.rejectChange}
+                onApplyAll={morphEditor.applyAllChanges}
+                onRejectAll={morphEditor.rejectAllChanges}
+                isProcessing={morphEditor.isProcessing}
+              />
               
               {/* Chat Input */}
               <div className="p-4 border-t border-gray-200 dark:border-gray-700">
