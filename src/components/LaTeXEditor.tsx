@@ -41,7 +41,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   const [isViewingVersion, setIsViewingVersion] = useState(false);
   const [title, setTitle] = useState(document.title);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -318,7 +318,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
       {isViewingVersion && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2">
           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-            📜 Viewing historical version from {selectedVersion && new Date(selectedVersion.created_at).toLocaleString()}. Click "Restore This Version" to make it current.
+            📜 Viewing historical version from {selectedVersion && new Date(selectedVersion.created_at).toLocaleString()}. Click &quot;Restore This Version&quot; to make it current.
           </p>
         </div>
       )}
@@ -404,7 +404,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
             {!pdfCompiler.pdfUrl && !pdfCompiler.isCompiling && !pdfCompiler.compileError && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center text-gray-500 dark:text-gray-400">
-                  <p className="text-sm">Click "Compile" to generate PDF preview</p>
+                  <p className="text-sm">Click &quot;Compile&quot; to generate PDF preview</p>
                 </div>
               </div>
             )}

@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { ProposedChange } from '@/lib/morph-types';
+import type { editor } from 'monaco-editor';
 
 interface MonacoLaTeXEditorProps {
   value: string;
@@ -29,7 +30,7 @@ export default function MonacoLaTeXEditor({
   onRejectChange,
   readOnly = false
 }: MonacoLaTeXEditorProps) {
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [decorations, setDecorations] = useState<string[]>([]);
   const [containerHeight, setContainerHeight] = useState(400);
 
@@ -113,7 +114,7 @@ export default function MonacoLaTeXEditor({
   };
 
   // Handle editor mount
-  const handleEditorDidMount = (editor: any, monaco: any) => {
+  const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor, monaco: typeof import('monaco-editor')) => {
     editorRef.current = editor;
     
     // Configure LaTeX language
@@ -153,6 +154,7 @@ export default function MonacoLaTeXEditor({
     // Register commands for apply/reject actions
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, function() {
       const position = editor.getPosition();
+      if (!position) return;
       const change = findChangeAtPosition(position);
       if (change) {
         onApplyChange(change.change.id);
@@ -161,6 +163,7 @@ export default function MonacoLaTeXEditor({
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Escape, function() {
       const position = editor.getPosition();
+      if (!position) return;
       const change = findChangeAtPosition(position);
       if (change) {
         onRejectChange(change.change.id);
@@ -169,7 +172,7 @@ export default function MonacoLaTeXEditor({
 
     // Register custom hover provider
     const hoverProvider = monaco.languages.registerHoverProvider('latex', {
-      provideHover: (model: any, position: any) => {
+      provideHover: (model: editor.ITextModel, position: import('monaco-editor').Position) => {
         const parsedChanges = parseChanges(proposedChanges);
         const change = parsedChanges.find(parsed => 
           position.lineNumber >= parsed.startLine && 
@@ -227,7 +230,7 @@ ${change.content || 'No content changes'}
   };
 
   // Find change at cursor position
-  const findChangeAtPosition = (position: any): ParsedChange | null => {
+  const findChangeAtPosition = (position: { lineNumber: number; column: number }): ParsedChange | null => {
     const parsedChanges = parseChanges(proposedChanges);
     return parsedChanges.find(parsed => 
       position.lineNumber >= parsed.startLine && 
