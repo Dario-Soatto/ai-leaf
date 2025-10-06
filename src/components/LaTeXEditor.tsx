@@ -374,7 +374,12 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               {pdfCompiler.isCompiling ? 'Compiling...' : 'Compile'}
             </button>
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden relative">
+            {/* Resize overlay to prevent iframe from capturing events */}
+            {panelResize.isResizing && (
+              <div className="absolute inset-0 z-50" style={{ pointerEvents: 'all' }} />
+            )}
+            
             {pdfCompiler.isCompiling && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">

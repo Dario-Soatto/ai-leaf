@@ -4,6 +4,7 @@ export function usePanelResize() {
   const [leftPanelWidth, setLeftPanelWidth] = useState(33.33);
   const [middlePanelWidth, setMiddlePanelWidth] = useState(33.33);
   const [rightPanelWidth, setRightPanelWidth] = useState(33.34);
+  const [isResizing, setIsResizing] = useState(false);
 
   const leftResizeRef = useRef<HTMLDivElement>(null);
   const rightResizeRef = useRef<HTMLDivElement>(null);
@@ -11,6 +12,7 @@ export function usePanelResize() {
 
   const handleMouseDown = useCallback((e: React.MouseEvent, resizeType: 'left' | 'right') => {
     e.preventDefault();
+    setIsResizing(true);
     
     const startX = e.clientX;
     const startLeftWidth = leftPanelWidth;
@@ -46,6 +48,7 @@ export function usePanelResize() {
       document.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      setIsResizing(false);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -61,6 +64,7 @@ export function usePanelResize() {
     leftResizeRef,
     rightResizeRef,
     containerRef,
-    handleMouseDown
+    handleMouseDown,
+    isResizing
   };
 }
