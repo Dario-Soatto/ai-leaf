@@ -39,6 +39,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   const [versions, setVersions] = useState<Version[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<Version | null>(null);
   const [isViewingVersion, setIsViewingVersion] = useState(false);
+  const [title, setTitle] = useState(document.title);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
 
   const supabase = useMemo(() => createClient(), []);
@@ -182,6 +184,43 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     }
   };
 
+  // Save title to database
+  const saveTitle = async (newTitle: string) => {
+    if (!newTitle.trim()) {
+      setTitle(document.title); // Revert if empty
+      return;
+    }
+    
+    try {
+      await supabase
+        .from('documents')
+        .update({ title: newTitle.trim() })
+        .eq('id', document.id);
+      
+      setTitle(newTitle.trim());
+    } catch (error) {
+      console.error('Error saving title:', error);
+      setTitle(document.title); // Revert on error
+    }
+  };
+
+  // Handle title edit completion
+  const handleTitleSubmit = () => {
+    setIsEditingTitle(false);
+    if (title !== document.title) {
+      saveTitle(title);
+    }
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleTitleSubmit();
+    } else if (e.key === 'Escape') {
+      setTitle(document.title);
+      setIsEditingTitle(false);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -193,9 +232,28 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
           >
             ← Back
           </Link>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {document.title}
-          </h1>
+          
+          {/* Editable Title */}
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={handleTitleSubmit}
+              onKeyDown={handleTitleKeyDown}
+              autoFocus
+              className="text-xl font-semibold text-gray-900 dark:text-white bg-transparent border-b-2 border-blue-500 focus:outline-none px-1"
+            />
+          ) : (
+            <h1 
+              onClick={() => setIsEditingTitle(true)}
+              className="text-xl font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              title="Click to edit"
+            >
+              {title}
+            </h1>
+          )}
+          
           {isSaving && (
             <span className="text-sm text-gray-500 dark:text-gray-400">
               Saving...
