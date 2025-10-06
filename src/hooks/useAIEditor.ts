@@ -77,7 +77,6 @@ export function useAIEditor(latexCode: string, setLatexCode: (code: string) => v
     if (aiProposal) {
       setLatexCode(aiProposal.newLatexCode);
       setAIProposal(null);
-      setPdfUrl(null);
       setCompileError(null);
     }
   }, [aiProposal, setLatexCode, setPdfUrl, setCompileError]);

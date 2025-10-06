@@ -136,17 +136,11 @@ This document demonstrates various LaTeX features including mathematics, lists, 
           className="border-r border-gray-200 dark:border-gray-700 flex flex-col"
           style={{ width: `${panelResize.leftPanelWidth}%` }}
         >
-          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between h-10">
             <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
               LaTeX Code
             </h2>
-            <button
-              onClick={() => pdfCompiler.compileLatex(latexCode)}
-              disabled={pdfCompiler.isCompiling}
-              className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
-            >
-              {pdfCompiler.isCompiling ? 'Compiling...' : 'Compile'}
-            </button>
+            <div className="w-16"></div>
           </div>
           <div className="flex-1 min-h-0">
             <MonacoLaTeXEditor
@@ -174,10 +168,17 @@ This document demonstrates various LaTeX features including mathematics, lists, 
           className="border-r border-gray-200 dark:border-gray-700 flex flex-col"
           style={{ width: `${panelResize.middlePanelWidth}%` }}
         >
-          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between h-10">
             <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
               PDF Preview
             </h2>
+            <button
+              onClick={() => pdfCompiler.compileLatex(latexCode)}
+              disabled={pdfCompiler.isCompiling}
+              className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+            >
+              {pdfCompiler.isCompiling ? 'Compiling...' : 'Compile'}
+            </button>
           </div>
           <div className="flex-1 overflow-hidden">
             {pdfCompiler.isCompiling && (
@@ -227,18 +228,19 @@ This document demonstrates various LaTeX features including mathematics, lists, 
 
         {/* Right Panel - AI Chat */}
         <div 
-          className="flex flex-col"
+          className="flex flex-col overflow-hidden"
           style={{ width: `${panelResize.rightPanelWidth}%` }}
         >
-          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between h-10">
             <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
               AI Assistant ({editingMode === 'complete' ? 'Complete Rewrite' : 'Morph Diff'})
             </h2>
+            <div className="w-16"></div>
           </div>
           
           {/* Render appropriate chat panel based on mode */}
           {editingMode === 'complete' ? (
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col overflow-hidden">
               {/* Chat Messages Area */}
               <div className="flex-1 p-4 overflow-auto">
                 <div className="space-y-3">
@@ -271,7 +273,7 @@ This document demonstrates various LaTeX features including mathematics, lists, 
               
               {/* AI Proposals */}
               {aiEditor.aiProposal && (
-                <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                     <h3 className="text-blue-800 dark:text-blue-200 font-medium mb-2">
                       AI Proposal
@@ -301,7 +303,7 @@ This document demonstrates various LaTeX features including mathematics, lists, 
               )}
               
               {/* Chat Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <form onSubmit={handleChatSubmit} className="flex gap-2">
                   <input
                     name="message"
@@ -322,7 +324,7 @@ This document demonstrates various LaTeX features including mathematics, lists, 
             </div>
           ) : (
             /* Morph Diff Mode - Chat + Proposal Panel */
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col overflow-hidden">
               {/* Chat Messages Area */}
               <div className="flex-1 p-4 overflow-auto">
                 <div className="space-y-3">
@@ -354,17 +356,19 @@ This document demonstrates various LaTeX features including mathematics, lists, 
               </div>
               
               {/* Proposed Changes Panel */}
-              <MorphProposalPanel
-                changes={morphEditor.proposedChanges}
-                onApplyChange={morphEditor.applyChange}
-                onRejectChange={morphEditor.rejectChange}
-                onApplyAll={morphEditor.applyAllChanges}
-                onRejectAll={morphEditor.rejectAllChanges}
-                isProcessing={morphEditor.isProcessing}
-              />
+              <div className="flex-shrink-0">
+                <MorphProposalPanel
+                  changes={morphEditor.proposedChanges}
+                  onApplyChange={morphEditor.applyChange}
+                  onRejectChange={morphEditor.rejectChange}
+                  onApplyAll={morphEditor.applyAllChanges}
+                  onRejectAll={morphEditor.rejectAllChanges}
+                  isProcessing={morphEditor.isProcessing}
+                />
+              </div>
               
               {/* Chat Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <form onSubmit={handleChatSubmit} className="flex gap-2">
                   <input
                     name="message"

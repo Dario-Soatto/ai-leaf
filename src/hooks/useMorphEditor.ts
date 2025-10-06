@@ -120,7 +120,6 @@ export function useMorphEditor(
       
       // Update the LaTeX code with the merged result
       setLatexCode(result.mergedCode);
-      setPdfUrl(null); // Clear PDF to force recompilation
       setCompileError(null);
       
       // Remove this change from the proposed changes
@@ -174,7 +173,6 @@ export function useMorphEditor(
 
       // Update the LaTeX code with the final merged result
       setLatexCode(currentCode);
-      setPdfUrl(null); // Clear PDF to force recompilation
       setCompileError(null);
       
       // Clear all proposals
