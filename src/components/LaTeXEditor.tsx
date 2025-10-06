@@ -6,6 +6,7 @@ import { useMorphEditor } from '@/hooks/useMorphEditor';
 import { usePDFCompiler } from '@/hooks/usePDFCompiler';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import MorphChatPanel from './MorphChatPanel';
+import MonacoLaTeXEditor from './MonacoLaTeXEditor';
 
 type EditingMode = 'complete' | 'morph';
 
@@ -146,12 +147,14 @@ This document demonstrates various LaTeX features including mathematics, lists, 
               {pdfCompiler.isCompiling ? 'Compiling...' : 'Compile'}
             </button>
           </div>
-          <div className="flex-1 p-4">
-            <textarea
+          <div className="flex-1 min-h-0">
+            <MonacoLaTeXEditor
               value={latexCode}
-              onChange={(e) => setLatexCode(e.target.value)}
-              className="w-full h-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your LaTeX code here..."
+              onChange={setLatexCode}
+              proposedChanges={editingMode === 'morph' ? morphEditor.proposedChanges : []}
+              onApplyChange={morphEditor.applyChange}
+              onRejectChange={morphEditor.rejectChange}
+              readOnly={false}
             />
           </div>
         </div>
@@ -317,17 +320,58 @@ This document demonstrates various LaTeX features including mathematics, lists, 
               </div>
             </div>
           ) : (
-            /* Morph Diff Mode */
-            <MorphChatPanel
-              chatMessages={morphEditor.chatMessages}
-              proposedChanges={morphEditor.proposedChanges}
-              isProcessing={morphEditor.isProcessing}
-              onSendMessage={morphEditor.handleAIEdit}
-              onApplyChange={morphEditor.applyChange}
-              onRejectChange={morphEditor.rejectChange}
-              onApplyAll={morphEditor.applyAllChanges}
-              onRejectAll={morphEditor.rejectAllChanges}
-            />
+            /* Morph Diff Mode - Simplified chat panel without proposal display */
+            <div className="flex-1 flex flex-col">
+              {/* Chat Messages Area */}
+              <div className="flex-1 p-4 overflow-auto">
+                <div className="space-y-3">
+                  {morphEditor.chatMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`p-3 rounded-lg ${
+                        message.type === 'user'
+                          ? 'bg-blue-600 text-white ml-8'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white mr-8'
+                      }`}
+                    >
+                      <p className="text-sm">{message.content}</p>
+                      <p className="text-xs opacity-70 mt-1">
+                        {message.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
+                  ))}
+                  
+                  {morphEditor.isProcessing && (
+                    <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mr-8">
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">AI is thinking...</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Chat Input */}
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                <form onSubmit={handleChatSubmit} className="flex gap-2">
+                  <input
+                    name="message"
+                    type="text"
+                    placeholder="Ask me to help with your LaTeX..."
+                    disabled={morphEditor.isProcessing}
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={morphEditor.isProcessing}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-50"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+            </div>
           )}
         </div>
       </div>
