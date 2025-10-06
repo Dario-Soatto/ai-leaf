@@ -11,6 +11,8 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.23",
     "@monaco-editor/react": "^4.7.0",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.74.0",
     "ai": "^5.0.60",
     "next": "15.5.4",
     "react": "19.1.0",
