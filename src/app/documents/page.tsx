@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import Link from 'next/link';
+import LogoutButton from '@/components/LogoutButton';
 
 export default async function DocumentsPage() {
   const supabase = await createServerSupabaseClient();
@@ -29,14 +30,17 @@ export default async function DocumentsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             My LaTeX Documents
           </h1>
-          <form action="/api/documents/create" method="POST">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
-            >
-              + New Document
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            <form action="/api/documents/create" method="POST">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+              >
+                + New Document
+              </button>
+            </form>
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
