@@ -29,6 +29,9 @@ export function useMorphEditor(
     currentLatex: latexCode
   });
 
+  const [applyingChangeId, setApplyingChangeId] = useState<string | null>(null);
+  const [isApplyingAll, setIsApplyingAll] = useState(false);
+
   const handleAIEdit = useCallback(async (userRequest: string) => {
     if (!userRequest.trim()) return;
 
@@ -95,7 +98,8 @@ export function useMorphEditor(
   const applyChange = useCallback(async (changeId: string) => {
     const change = state.proposedChanges.find(c => c.id === changeId);
     if (!change) return;
-
+    
+    setApplyingChangeId(changeId);
     try {
       const morphRequest: MorphApplyRequest = {
         instruction: change.description,
@@ -116,18 +120,20 @@ export function useMorphEditor(
       setLatexCode(result.mergedCode);
       setCompileError(null);
       
-      // ⭐ Automatically compile after applying
-      await compileLatex(result.mergedCode);
-      
       setState(prev => ({
         ...prev,
         proposedChanges: prev.proposedChanges.filter(c => c.id !== changeId),
         hasActiveProposal: prev.proposedChanges.length > 1
       }));
 
+      setApplyingChangeId(null);
+      
+      await compileLatex(result.mergedCode);
+
     } catch (error) {
       console.error('Error applying change:', error);
       setCompileError(`Failed to apply change: ${change.description}`);
+      setApplyingChangeId(null);
     }
   }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
 
@@ -140,6 +146,7 @@ export function useMorphEditor(
   }, []);
 
   const applyAllChanges = useCallback(async () => {
+    setIsApplyingAll(true);
     if (state.proposedChanges.length === 0) return;
 
     try {
@@ -167,18 +174,20 @@ export function useMorphEditor(
       setLatexCode(currentCode);
       setCompileError(null);
       
-      // ⭐ Automatically compile after applying all
-      await compileLatex(currentCode);
-      
       setState(prev => ({
         ...prev,
         proposedChanges: [],
         hasActiveProposal: false
       }));
 
+      setIsApplyingAll(false);
+      
+      await compileLatex(currentCode);
+
     } catch (error) {
       console.error('Error applying all changes:', error);
       setCompileError('Failed to apply changes. Please try again.');
+      setIsApplyingAll(false);
     }
   }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
 
@@ -192,6 +201,8 @@ export function useMorphEditor(
 
   return {
     isProcessing: state.isProcessing,
+    applyingChangeId,
+    isApplyingAll,
     proposedChanges: state.proposedChanges,
     chatMessages: state.chatMessages,
     hasActiveProposal: state.hasActiveProposal,

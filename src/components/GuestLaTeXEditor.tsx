@@ -42,24 +42,17 @@ export default function GuestLaTeXEditor() {
   const [latexCode, setLatexCode] = useState(DEFAULT_LATEX);
   const [editingMode, setEditingMode] = useState<EditingMode>('morph');
 
+  // Use custom hooks
   const pdfCompiler = usePDFCompiler();
   const panelResize = usePanelResize();
   
-  // ⭐ Pass compile function to both hooks
-  const aiEditor = useAIEditor(
-    latexCode, 
-    setLatexCode, 
-    pdfCompiler.setPdfUrl, 
-    pdfCompiler.setCompileError,
-    pdfCompiler.compileLatex // ⭐ Added
-  );
-  const morphEditor = useMorphEditor(
-    latexCode, 
-    setLatexCode, 
-    pdfCompiler.setPdfUrl, 
-    pdfCompiler.setCompileError,
-    pdfCompiler.compileLatex // ⭐ Added
-  );
+  const aiEditor = useAIEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError, pdfCompiler.compileLatex);
+  const morphEditor = useMorphEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError, pdfCompiler.compileLatex);
+
+  // Auto-compile on mount
+  useEffect(() => {
+    pdfCompiler.compileLatex(latexCode);
+  }, []);
 
   const handleChatSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -293,10 +286,11 @@ export default function GuestLaTeXEditor() {
                       <div className="flex gap-2">
                         <Button
                           onClick={aiEditor.acceptAIProposal}
+                          disabled={aiEditor.isApplying}
                           size="sm"
                           variant="default"
                         >
-                          Accept
+                          {aiEditor.isApplying ? 'Applying...' : 'Accept'}
                         </Button>
                         <Button
                           onClick={aiEditor.rejectAIProposal}
@@ -377,6 +371,8 @@ export default function GuestLaTeXEditor() {
                   onApplyAll={morphEditor.applyAllChanges}
                   onRejectAll={morphEditor.rejectAllChanges}
                   isProcessing={morphEditor.isProcessing}
+                  applyingChangeId={morphEditor.applyingChangeId}
+                  isApplyingAll={morphEditor.isApplyingAll}
                 />
               </div>
               

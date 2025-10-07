@@ -7,13 +7,15 @@ interface MorphChangeDisplayProps {
   onApply: (changeId: string) => void;
   onReject: (changeId: string) => void;
   isApplying?: boolean;
+  disabled?: boolean;
 }
 
 export default function MorphChangeDisplay({ 
   change, 
   onApply, 
   onReject, 
-  isApplying = false 
+  isApplying = false,
+  disabled = false
 }: MorphChangeDisplayProps) {
   return (
     <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-3 bg-blue-50 dark:bg-blue-900/20">
@@ -39,14 +41,14 @@ export default function MorphChangeDisplay({
       <div className="flex gap-2">
         <button
           onClick={() => onApply(change.id)}
-          disabled={isApplying}
+          disabled={isApplying || disabled}
           className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
         >
           {isApplying ? 'Applying...' : 'Apply'}
         </button>
         <button
           onClick={() => onReject(change.id)}
-          disabled={isApplying}
+          disabled={isApplying || disabled}
           className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
         >
           Reject

@@ -10,6 +10,8 @@ interface MorphProposalPanelProps {
   onApplyAll: () => void;
   onRejectAll: () => void;
   isProcessing?: boolean;
+  applyingChangeId?: string | null;
+  isApplyingAll?: boolean;
 }
 
 export default function MorphProposalPanel({
@@ -18,7 +20,9 @@ export default function MorphProposalPanel({
   onRejectChange,
   onApplyAll,
   onRejectAll,
-  isProcessing = false
+  isProcessing = false,
+  applyingChangeId = null,
+  isApplyingAll = false
 }: MorphProposalPanelProps) {
   if (changes.length === 0) {
     return null;
@@ -31,18 +35,17 @@ export default function MorphProposalPanel({
           Proposed Changes ({changes.length})
         </h3>
         
-        {/* Bulk Actions */}
         <div className="flex gap-2 mb-3">
           <button
             onClick={onApplyAll}
-            disabled={isProcessing}
+            disabled={isProcessing || isApplyingAll || applyingChangeId !== null}
             className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
           >
-            Apply All
+            {isApplyingAll ? 'Applying...' : 'Apply All'}
           </button>
           <button
             onClick={onRejectAll}
-            disabled={isProcessing}
+            disabled={isProcessing || isApplyingAll || applyingChangeId !== null}
             className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
           >
             Reject All
@@ -50,7 +53,6 @@ export default function MorphProposalPanel({
         </div>
       </div>
 
-      {/* Individual Changes */}
       <div className="space-y-3">
         {changes.map((change) => (
           <MorphChangeDisplay
@@ -58,7 +60,8 @@ export default function MorphProposalPanel({
             change={change}
             onApply={onApplyChange}
             onReject={onRejectChange}
-            isApplying={isProcessing}
+            isApplying={applyingChangeId === change.id}
+            disabled={applyingChangeId !== null && applyingChangeId !== change.id}
           />
         ))}
       </div>

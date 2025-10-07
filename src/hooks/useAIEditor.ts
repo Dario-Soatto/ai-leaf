@@ -19,9 +19,10 @@ export function useAIEditor(
   setLatexCode: (code: string) => void, 
   setPdfUrl: (url: string | null) => void, 
   setCompileError: (error: string | null) => void,
-  compileLatex: (code: string) => Promise<void> // ⭐ Added compile function
+  compileLatex: (code: string) => Promise<void>
 ) {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
   const [aiProposal, setAIProposal] = useState<AIProposal | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -81,12 +82,19 @@ export function useAIEditor(
 
   const acceptAIProposal = useCallback(async () => {
     if (aiProposal) {
-      setLatexCode(aiProposal.newLatexCode);
-      setAIProposal(null);
-      setCompileError(null);
-      
-      // ⭐ Automatically compile after accepting
-      await compileLatex(aiProposal.newLatexCode);
+      setIsApplying(true);
+      try {
+        setLatexCode(aiProposal.newLatexCode);
+        setAIProposal(null);
+        setCompileError(null);
+        
+        setIsApplying(false);
+        
+        // Compile after accepting (not included in loading state)
+        await compileLatex(aiProposal.newLatexCode);
+      } catch (error) {
+        setIsApplying(false);
+      }
     }
   }, [aiProposal, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
 
@@ -96,6 +104,7 @@ export function useAIEditor(
 
   return {
     isAIProcessing,
+    isApplying,
     aiProposal,
     chatMessages,
     handleAIEdit,

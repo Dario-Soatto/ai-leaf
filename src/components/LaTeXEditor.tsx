@@ -57,24 +57,18 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
 
   const supabase = useMemo(() => createClient(), []);
 
+  // Use custom hooks
   const pdfCompiler = usePDFCompiler();
   const panelResize = usePanelResize();
   
-  // ⭐ Pass compile function to both hooks
-  const aiEditor = useAIEditor(
-    latexCode, 
-    setLatexCode, 
-    pdfCompiler.setPdfUrl, 
-    pdfCompiler.setCompileError,
-    pdfCompiler.compileLatex // ⭐ Added
-  );
-  const morphEditor = useMorphEditor(
-    latexCode, 
-    setLatexCode, 
-    pdfCompiler.setPdfUrl, 
-    pdfCompiler.setCompileError,
-    pdfCompiler.compileLatex // ⭐ Added
-  );
+  // Use the appropriate editor hook based on mode
+  const aiEditor = useAIEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError, pdfCompiler.compileLatex);
+  const morphEditor = useMorphEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError, pdfCompiler.compileLatex);
+
+  // Auto-compile on mount
+  useEffect(() => {
+    pdfCompiler.compileLatex(latexCode);
+  }, []); // Empty dependency array = run once on mount
 
   // Fetch versions on mount
   useEffect(() => {
@@ -520,10 +514,11 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                       <div className="flex gap-2">
                         <Button
                           onClick={aiEditor.acceptAIProposal}
+                          disabled={aiEditor.isApplying}
                           size="sm"
                           variant="default"
                         >
-                          Accept
+                          {aiEditor.isApplying ? 'Applying...' : 'Accept'}
                         </Button>
                         <Button
                           onClick={aiEditor.rejectAIProposal}
@@ -604,6 +599,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                   onApplyAll={morphEditor.applyAllChanges}
                   onRejectAll={morphEditor.rejectAllChanges}
                   isProcessing={morphEditor.isProcessing}
+                  applyingChangeId={morphEditor.applyingChangeId}
+                  isApplyingAll={morphEditor.isApplyingAll}
                 />
               </div>
               
