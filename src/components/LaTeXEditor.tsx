@@ -9,6 +9,17 @@ import MorphProposalPanel from './MorphProposalPanel';
 import MonacoLaTeXEditor from './MonacoLaTeXEditor';
 import { createClient } from '@/lib/supabase';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 
 type EditingMode = 'complete' | 'morph';
 
@@ -45,11 +56,9 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
 
   const supabase = useMemo(() => createClient(), []);
 
-  // Use custom hooks
   const pdfCompiler = usePDFCompiler();
   const panelResize = usePanelResize();
   
-  // Use the appropriate editor hook based on mode
   const aiEditor = useAIEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError);
   const morphEditor = useMorphEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError);
 
@@ -222,32 +231,31 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+      <header className="border-b bg-card/50 backdrop-blur px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link 
-            href="/documents"
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-          >
-            ← Back
-          </Link>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/documents">
+              ← Back
+            </Link>
+          </Button>
           
           {/* Editable Title */}
           {isEditingTitle ? (
-            <input
+            <Input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={handleTitleSubmit}
               onKeyDown={handleTitleKeyDown}
               autoFocus
-              className="text-xl font-semibold text-gray-900 dark:text-white bg-transparent border-b-2 border-blue-500 focus:outline-none px-1"
+              className="w-64"
             />
           ) : (
             <h1 
               onClick={() => setIsEditingTitle(true)}
-              className="text-xl font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              className="text-xl font-semibold cursor-pointer hover:text-primary transition-colors"
               title="Click to edit"
             >
               {title}
@@ -255,86 +263,86 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
           )}
           
           {isSaving && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-muted-foreground">
               Saving...
             </span>
           )}
           
-          {/* Version History Dropdown */}
+          {/* Version History Select */}
           <div className="flex items-center gap-2">
-            <select
+            <Select
               value={selectedVersion?.id || 'current'}
-              onChange={(e) => handleVersionSelect(e.target.value)}
-              className="px-3 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              onValueChange={handleVersionSelect}
             >
-              <option value="current">Current Version</option>
-              {versions.map((version) => (
-                <option key={version.id} value={version.id}>
-                  {new Date(version.created_at).toLocaleString()} ({version.trigger_type === 'manual_compile' ? 'Compiled' : 'AI Edit'})
-                </option>
-              ))}
-            </select>
+              <SelectTrigger size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current">Current Version</SelectItem>
+                {versions.map((version) => (
+                  <SelectItem key={version.id} value={version.id}>
+                    {new Date(version.created_at).toLocaleString()} ({version.trigger_type === 'manual_compile' ? 'Compiled' : 'AI Edit'})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             
             {isViewingVersion && (
-              <button
+              <Button
                 onClick={handleRestoreVersion}
-                className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700"
+                size="sm"
+                variant="default"
               >
                 Restore This Version
-              </button>
+              </Button>
             )}
           </div>
         </div>
         
         {/* Editing Mode Toggle */}
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Mode:</span>
-          <button
-            onClick={() => setEditingMode('complete')}
-            disabled={isViewingVersion}
-            className={`px-3 py-1 text-xs rounded-md ${
-              editingMode === 'complete'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-            } disabled:opacity-50`}
-          >
-            Complete Rewrite
-          </button>
-          <button
-            onClick={() => setEditingMode('morph')}
-            disabled={isViewingVersion}
-            className={`px-3 py-1 text-xs rounded-md ${
-              editingMode === 'morph'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-            } disabled:opacity-50`}
-          >
-            Morph Diff
-          </button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Mode:</span>
+          <div className="flex gap-1">
+            <Button
+              onClick={() => setEditingMode('complete')}
+              disabled={isViewingVersion}
+              variant={editingMode === 'complete' ? 'default' : 'ghost'}
+              size="sm"
+            >
+              Complete Rewrite
+            </Button>
+            <Button
+              onClick={() => setEditingMode('morph')}
+              disabled={isViewingVersion}
+              variant={editingMode === 'morph' ? 'default' : 'ghost'}
+              size="sm"
+            >
+              Morph Diff
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Version viewing banner */}
       {isViewingVersion && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2">
-          <p className="text-sm text-yellow-800 dark:text-yellow-200">
+        <Alert className="rounded-none border-x-0 border-t-0">
+          <AlertDescription>
             📜 Viewing historical version from {selectedVersion && new Date(selectedVersion.created_at).toLocaleString()}. Click &quot;Restore This Version&quot; to make it current.
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Three Panel Layout */}
       <div ref={panelResize.containerRef} className="flex-1 flex overflow-hidden">
         {/* Left Panel - LaTeX Code Editor */}
         <div 
-          className="border-r border-gray-200 dark:border-gray-700 flex flex-col"
+          className="border-r flex flex-col"
           style={{ width: `${panelResize.leftPanelWidth}%` }}
         >
-          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between h-10">
-            <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
+            <h2 className="text-sm font-medium">
               LaTeX Code {isViewingVersion && '(Read-Only)'}
             </h2>
-            <div className="w-16"></div>
           </div>
           <div className="flex-1 min-h-0">
             <MonacoLaTeXEditor
@@ -351,50 +359,47 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
         {/* Left Resize Handle */}
         <div
           ref={panelResize.leftResizeRef}
-          className="w-1 bg-gray-200 dark:bg-gray-600 hover:bg-blue-400 dark:hover:bg-blue-500 cursor-col-resize transition-colors duration-150 flex items-center justify-center group"
+          className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors"
           onMouseDown={(e) => panelResize.handleMouseDown(e, 'left')}
-        >
-          <div className="w-0.5 h-8 bg-gray-400 dark:bg-gray-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-400 rounded-full"></div>
-        </div>
+        />
 
-        {/* Middle Panel - LaTeX Renderer */}
+        {/* Middle Panel - PDF Preview */}
         <div 
-          className="border-r border-gray-200 dark:border-gray-700 flex flex-col"
+          className="border-r flex flex-col"
           style={{ width: `${panelResize.middlePanelWidth}%` }}
         >
-          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between h-10">
-            <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              PDF Preview
-            </h2>
-            <button
+          <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
+            <h2 className="text-sm font-medium">PDF Preview</h2>
+            <Button
               onClick={handleCompile}
               disabled={pdfCompiler.isCompiling}
-              className="px-3 py-1 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+              size="sm"
             >
               {pdfCompiler.isCompiling ? 'Compiling...' : 'Compile'}
-            </button>
+            </Button>
           </div>
           <div className="flex-1 overflow-hidden relative">
-            {/* Resize overlay to prevent iframe from capturing events */}
             {panelResize.isResizing && (
-              <div className="absolute inset-0 z-50" style={{ pointerEvents: 'all' }} />
+              <div className="absolute inset-0 z-50" />
             )}
             
             {pdfCompiler.isCompiling && (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Compiling LaTeX...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Compiling LaTeX...</p>
                 </div>
               </div>
             )}
 
             {pdfCompiler.compileError && (
               <div className="p-4 h-full flex items-center justify-center">
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 max-w-md">
-                  <h3 className="text-red-800 dark:text-red-200 font-medium mb-2">Compilation Error</h3>
-                  <p className="text-red-700 dark:text-red-300 text-sm">{pdfCompiler.compileError}</p>
-                </div>
+                <Alert variant="destructive" className="max-w-md">
+                  <AlertDescription>
+                    <h3 className="font-medium mb-2">Compilation Error</h3>
+                    <p className="text-sm">{pdfCompiler.compileError}</p>
+                  </AlertDescription>
+                </Alert>
               </div>
             )}
 
@@ -408,9 +413,9 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
 
             {!pdfCompiler.pdfUrl && !pdfCompiler.isCompiling && !pdfCompiler.compileError && (
               <div className="flex items-center justify-center h-full">
-                <div className="text-center text-gray-500 dark:text-gray-400">
-                  <p className="text-sm">Click &quot;Compile&quot; to generate PDF preview</p>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Click &quot;Compile&quot; to generate PDF preview
+                </p>
               </div>
             )}
           </div>
@@ -419,28 +424,25 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
         {/* Right Resize Handle */}
         <div
           ref={panelResize.rightResizeRef}
-          className="w-1 bg-gray-200 dark:bg-gray-600 hover:bg-blue-400 dark:hover:bg-blue-500 cursor-col-resize transition-colors duration-150 flex items-center justify-center group"
+          className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors"
           onMouseDown={(e) => panelResize.handleMouseDown(e, 'right')}
-        >
-          <div className="w-0.5 h-8 bg-gray-400 dark:bg-gray-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-400 rounded-full"></div>
-        </div>
+        />
 
         {/* Right Panel - AI Chat */}
         <div 
           className="flex flex-col overflow-hidden"
           style={{ width: `${panelResize.rightPanelWidth}%` }}
         >
-          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between h-10">
-            <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
+            <h2 className="text-sm font-medium">
               AI Assistant ({editingMode === 'complete' ? 'Complete Rewrite' : 'Morph Diff'})
             </h2>
-            <div className="w-16"></div>
           </div>
           
-          {/* Render appropriate chat panel based on mode */}
+          {/* Chat Panel Content */}
           {editingMode === 'complete' ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Chat Messages Area */}
+              {/* Chat Messages */}
               <div className="flex-1 p-4 overflow-auto">
                 <div className="space-y-3">
                   {aiEditor.chatMessages.map((message) => (
@@ -448,8 +450,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                       key={message.id}
                       className={`p-3 rounded-lg ${
                         message.type === 'user'
-                          ? 'bg-blue-600 text-white ml-8'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white mr-8'
+                          ? 'bg-primary text-primary-foreground ml-8'
+                          : 'bg-muted mr-8'
                       }`}
                     >
                       <p className="text-sm">{message.content}</p>
@@ -460,71 +462,71 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                   ))}
                   
                   {aiEditor.isAIProcessing && (
-                    <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mr-8">
+                    <div className="bg-muted p-3 rounded-lg mr-8">
                       <div className="flex items-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">AI is thinking...</p>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <p className="text-sm text-muted-foreground">AI is thinking...</p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
               
-              {/* AI Proposals */}
+              {/* AI Proposal */}
               {aiEditor.aiProposal && (
-                <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                    <h3 className="text-blue-800 dark:text-blue-200 font-medium mb-2">
-                      AI Proposal
-                    </h3>
-                    <p className="text-blue-700 dark:text-blue-300 text-sm mb-2">
-                      {aiEditor.aiProposal.message}
-                    </p>
-                    <div className="text-xs text-blue-600 dark:text-blue-400 mb-3">
-                      Confidence: {Math.round(aiEditor.aiProposal.confidence * 100)}%
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={aiEditor.acceptAIProposal}
-                        className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={aiEditor.rejectAIProposal}
-                        className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </div>
+                <div className="border-t p-4">
+                  <Alert>
+                    <AlertDescription className="space-y-3">
+                      <div>
+                        <h3 className="font-medium mb-1">AI Proposal</h3>
+                        <p className="text-sm">{aiEditor.aiProposal.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Confidence: {Math.round(aiEditor.aiProposal.confidence * 100)}%
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={aiEditor.acceptAIProposal}
+                          size="sm"
+                          variant="default"
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          onClick={aiEditor.rejectAIProposal}
+                          size="sm"
+                          variant="destructive"
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
                 </div>
               )}
               
               {/* Chat Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <div className="p-4 border-t">
                 <form onSubmit={handleChatSubmit} className="flex gap-2">
-                  <input
+                  <Input
                     name="message"
                     type="text"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={aiEditor.isAIProcessing}
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                   />
-                  <button 
+                  <Button 
                     type="submit"
                     disabled={aiEditor.isAIProcessing}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-50"
                   >
                     Send
-                  </button>
+                  </Button>
                 </form>
               </div>
             </div>
           ) : (
-            /* Morph Diff Mode - Chat + Proposal Panel */
+            /* Morph Mode */
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Chat Messages Area */}
+              {/* Chat Messages */}
               <div className="flex-1 p-4 overflow-auto">
                 <div className="space-y-3">
                   {morphEditor.chatMessages.map((message) => (
@@ -532,8 +534,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                       key={message.id}
                       className={`p-3 rounded-lg ${
                         message.type === 'user'
-                          ? 'bg-blue-600 text-white ml-8'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white mr-8'
+                          ? 'bg-primary text-primary-foreground ml-8'
+                          : 'bg-muted mr-8'
                       }`}
                     >
                       <p className="text-sm">{message.content}</p>
@@ -544,17 +546,17 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                   ))}
                   
                   {morphEditor.isProcessing && (
-                    <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mr-8">
+                    <div className="bg-muted p-3 rounded-lg mr-8">
                       <div className="flex items-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">AI is thinking...</p>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <p className="text-sm text-muted-foreground">AI is thinking...</p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
               
-              {/* Proposed Changes Panel */}
+              {/* Morph Proposals */}
               <div className="flex-shrink-0">
                 <MorphProposalPanel
                   changes={morphEditor.proposedChanges}
@@ -567,22 +569,20 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               </div>
               
               {/* Chat Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <div className="p-4 border-t">
                 <form onSubmit={handleChatSubmit} className="flex gap-2">
-                  <input
+                  <Input
                     name="message"
                     type="text"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={morphEditor.isProcessing}
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                   />
-                  <button 
+                  <Button 
                     type="submit"
                     disabled={morphEditor.isProcessing}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm disabled:opacity-50"
                   >
                     Send
-                  </button>
+                  </Button>
                 </form>
               </div>
             </div>

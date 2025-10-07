@@ -4,6 +4,11 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -23,7 +28,6 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        // Sign up new user
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -33,7 +37,6 @@ export default function LoginPage() {
         setEmail('');
         setPassword('');
       } else {
-        // Sign in existing user
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -49,105 +52,115 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-2">
-          AI LaTeX Editor
-        </h1>
-        <p className="text-center text-gray-600 dark:text-gray-400 mb-4">
-          Create beautiful documents with AI assistance
-        </p>
-        
-        {/* Demo Link */}
-        <Link 
-          href="/demo"
-          className="block w-full py-2 text-center bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium mb-6 transition-colors"
-        >
-          ✨ Try Demo (No Login Required)
-        </Link>
-        
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => {
-              setIsSignUp(false);
-              setError('');
-              setSuccess('');
-            }}
-            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
-              !isSignUp
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => {
-              setIsSignUp(true);
-              setError('');
-              setSuccess('');
-            }}
-            className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${
-              isSignUp
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-          >
-            Sign Up
-          </button>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">
+            AI LaTeX Editor
+          </h1>
+          <p className="text-muted-foreground">
+            Create beautiful documents with AI assistance
+          </p>
         </div>
 
-        <form onSubmit={handleAuth} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Minimum 6 characters
-            </p>
-          </div>
-
-          {success && (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3">
-              <p className="text-green-700 dark:text-green-300 text-sm">{success}</p>
+        {/* Demo Link */}
+        <Button 
+          asChild
+          variant="outline" 
+          className="w-full"
+        >
+          <Link href="/demo">
+            ✨ Try Demo (No Login Required)
+          </Link>
+        </Button>
+        
+        <Card>
+          <CardHeader>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(false);
+                  setError('');
+                  setSuccess('');
+                }}
+                variant={!isSignUp ? "default" : "ghost"}
+                className="flex-1"
+              >
+                Sign In
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(true);
+                  setError('');
+                  setSuccess('');
+                }}
+                variant={isSignUp ? "default" : "ghost"}
+                className="flex-1"
+              >
+                Sign Up
+              </Button>
             </div>
-          )}
+          </CardHeader>
 
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-              <p className="text-red-700 dark:text-red-300 text-sm">{error}</p>
-            </div>
-          )}
+          <CardContent>
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="you@example.com"
+                />
+              </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
-          >
-            {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
-          </button>
-        </form>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="••••••••"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Minimum 6 characters
+                </p>
+              </div>
+
+              {success && (
+                <Alert>
+                  <AlertDescription className="text-green-600 dark:text-green-400">
+                    {success}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
