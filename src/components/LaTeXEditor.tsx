@@ -230,6 +230,25 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     }
   };
 
+  // Keyboard shortcut for compile (Cmd/Ctrl + Enter)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleCompile();
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [latexCode, pdfCompiler.compileError]); // Dependencies: rerun when these change
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}

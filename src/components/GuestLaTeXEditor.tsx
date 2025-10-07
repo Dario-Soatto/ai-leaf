@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAIEditor } from '@/hooks/useAIEditor';
 import { useMorphEditor } from '@/hooks/useMorphEditor';
 import { usePDFCompiler } from '@/hooks/usePDFCompiler';
@@ -61,6 +61,25 @@ export default function GuestLaTeXEditor() {
       e.currentTarget.reset();
     }
   };
+
+  // Keyboard shortcut for compile (Cmd/Ctrl + Enter)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Cmd+Enter (Mac) or Ctrl+Enter (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        pdfCompiler.compileLatex(latexCode);
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup on unmount
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [latexCode, pdfCompiler]);
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -147,6 +166,7 @@ export default function GuestLaTeXEditor() {
               onClick={() => pdfCompiler.compileLatex(latexCode)}
               disabled={pdfCompiler.isCompiling}
               size="sm"
+              title="⌘+Enter or Ctrl+Enter"
             >
               {pdfCompiler.isCompiling ? 'Compiling...' : 'Compile'}
             </Button>
