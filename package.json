@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.23",
+    "@ai-sdk/openai": "^2.0.44",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-select": "^2.2.6",

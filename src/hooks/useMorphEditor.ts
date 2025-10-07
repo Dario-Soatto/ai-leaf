@@ -11,9 +11,9 @@ export function useMorphEditor(
   latexCode: string, 
   setLatexCode: (code: string) => void, 
   setPdfUrl: (url: string | null) => void, 
-  setCompileError: (error: string | null) => void
+  setCompileError: (error: string | null) => void,
+  compileLatex: (code: string) => Promise<void> // ⭐ Added compile function
 ) {
-  // Initial state
   const [state, setState] = useState<MorphEditorState>({
     isProcessing: false,
     proposedChanges: [],
@@ -29,13 +29,11 @@ export function useMorphEditor(
     currentLatex: latexCode
   });
 
-  // Handle AI edit request - this will call our new API
   const handleAIEdit = useCallback(async (userRequest: string) => {
     if (!userRequest.trim()) return;
 
     setState(prev => ({ ...prev, isProcessing: true }));
     
-    // Add user message to chat
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
@@ -49,7 +47,6 @@ export function useMorphEditor(
     }));
 
     try {
-      // Call our new Morph API endpoint
       const response = await fetch('/api/ai/morph-edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,7 +60,6 @@ export function useMorphEditor(
 
       const result = await response.json();
       
-      // Add AI response to chat
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -96,7 +92,6 @@ export function useMorphEditor(
     }
   }, [latexCode]);
 
-  // Apply a single change using MorphLLM
   const applyChange = useCallback(async (changeId: string) => {
     const change = state.proposedChanges.find(c => c.id === changeId);
     if (!change) return;
@@ -118,40 +113,38 @@ export function useMorphEditor(
 
       const result = await response.json();
       
-      // Update the LaTeX code with the merged result
       setLatexCode(result.mergedCode);
       setCompileError(null);
       
-      // Remove this change from the proposed changes
+      // ⭐ Automatically compile after applying
+      await compileLatex(result.mergedCode);
+      
       setState(prev => ({
         ...prev,
         proposedChanges: prev.proposedChanges.filter(c => c.id !== changeId),
-        hasActiveProposal: prev.proposedChanges.length > 1 // Still has proposals if more than 1 left
+        hasActiveProposal: prev.proposedChanges.length > 1
       }));
 
     } catch (error) {
       console.error('Error applying change:', error);
       setCompileError(`Failed to apply change: ${change.description}`);
     }
-  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError]);
+  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
 
-  // Reject a single change (just remove it from the list)
   const rejectChange = useCallback((changeId: string) => {
     setState(prev => ({
       ...prev,
       proposedChanges: prev.proposedChanges.filter(c => c.id !== changeId),
-      hasActiveProposal: prev.proposedChanges.length > 1 // Still has proposals if more than 1 left
+      hasActiveProposal: prev.proposedChanges.length > 1
     }));
   }, []);
 
-  // Apply all changes at once
   const applyAllChanges = useCallback(async () => {
     if (state.proposedChanges.length === 0) return;
 
     try {
       let currentCode = latexCode;
       
-      // Apply changes one by one
       for (const change of state.proposedChanges) {
         const morphRequest: MorphApplyRequest = {
           instruction: change.description,
@@ -171,11 +164,12 @@ export function useMorphEditor(
         currentCode = result.mergedCode;
       }
 
-      // Update the LaTeX code with the final merged result
       setLatexCode(currentCode);
       setCompileError(null);
       
-      // Clear all proposals
+      // ⭐ Automatically compile after applying all
+      await compileLatex(currentCode);
+      
       setState(prev => ({
         ...prev,
         proposedChanges: [],
@@ -186,9 +180,8 @@ export function useMorphEditor(
       console.error('Error applying all changes:', error);
       setCompileError('Failed to apply changes. Please try again.');
     }
-  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError]);
+  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
 
-  // Reject all changes
   const rejectAllChanges = useCallback(() => {
     setState(prev => ({
       ...prev,
@@ -198,13 +191,11 @@ export function useMorphEditor(
   }, []);
 
   return {
-    // State
     isProcessing: state.isProcessing,
     proposedChanges: state.proposedChanges,
     chatMessages: state.chatMessages,
     hasActiveProposal: state.hasActiveProposal,
     
-    // Actions
     handleAIEdit,
     applyChange,
     rejectChange,

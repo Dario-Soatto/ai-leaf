@@ -14,7 +14,13 @@ export interface AIProposal {
   changes: string[];
 }
 
-export function useAIEditor(latexCode: string, setLatexCode: (code: string) => void, setPdfUrl: (url: string | null) => void, setCompileError: (error: string | null) => void) {
+export function useAIEditor(
+  latexCode: string, 
+  setLatexCode: (code: string) => void, 
+  setPdfUrl: (url: string | null) => void, 
+  setCompileError: (error: string | null) => void,
+  compileLatex: (code: string) => Promise<void> // ⭐ Added compile function
+) {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [aiProposal, setAIProposal] = useState<AIProposal | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -73,13 +79,16 @@ export function useAIEditor(latexCode: string, setLatexCode: (code: string) => v
     }
   }, [latexCode]);
 
-  const acceptAIProposal = useCallback(() => {
+  const acceptAIProposal = useCallback(async () => {
     if (aiProposal) {
       setLatexCode(aiProposal.newLatexCode);
       setAIProposal(null);
       setCompileError(null);
+      
+      // ⭐ Automatically compile after accepting
+      await compileLatex(aiProposal.newLatexCode);
     }
-  }, [aiProposal, setLatexCode, setPdfUrl, setCompileError]);
+  }, [aiProposal, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
 
   const rejectAIProposal = useCallback(() => {
     setAIProposal(null);

@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Call AI to generate proposed changes
     const result = await generateObject({
-      model: anthropic('claude-3-5-sonnet-20241022'),
+      model: anthropic('claude-sonnet-4-20250514'), // ⭐ Correct Claude Sonnet 4 name
       schema: MorphEditResponseSchema,
       prompt: `You are a LaTeX expert. The user wants to modify their LaTeX document.
 

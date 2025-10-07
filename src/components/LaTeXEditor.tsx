@@ -59,8 +59,21 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   const pdfCompiler = usePDFCompiler();
   const panelResize = usePanelResize();
   
-  const aiEditor = useAIEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError);
-  const morphEditor = useMorphEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError);
+  // ⭐ Pass compile function to both hooks
+  const aiEditor = useAIEditor(
+    latexCode, 
+    setLatexCode, 
+    pdfCompiler.setPdfUrl, 
+    pdfCompiler.setCompileError,
+    pdfCompiler.compileLatex // ⭐ Added
+  );
+  const morphEditor = useMorphEditor(
+    latexCode, 
+    setLatexCode, 
+    pdfCompiler.setPdfUrl, 
+    pdfCompiler.setCompileError,
+    pdfCompiler.compileLatex // ⭐ Added
+  );
 
   // Fetch versions on mount
   useEffect(() => {

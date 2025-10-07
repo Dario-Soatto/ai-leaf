@@ -14,7 +14,6 @@ export interface LaTeXEditResponse {
   changes: string[];
 }
 
-// Define the Zod schema
 const LaTeXEditResponseSchema = z.object({
   message: z.string().describe('Brief explanation of what changes were made'),
   newLatexCode: z.string().describe('The complete modified LaTeX document'),
@@ -26,7 +25,7 @@ export async function editLaTeXDocument(request: LaTeXEditRequest): Promise<LaTe
   const { currentLatex, userRequest } = request;
 
   const result = await generateObject({
-    model: anthropic('claude-3-5-sonnet-20241022'),
+    model: anthropic('claude-sonnet-4-20250514'), // ⭐ Correct Claude Sonnet 4 name
     schema: LaTeXEditResponseSchema,
     prompt: `You are a LaTeX expert. The user wants to modify their LaTeX document.
 
