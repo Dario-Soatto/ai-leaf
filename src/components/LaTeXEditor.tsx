@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea'; // ⭐ Add this import
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
@@ -349,7 +350,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               variant={editingMode === 'morph' ? 'default' : 'ghost'}
               size="sm"
             >
-              Morph Diff
+              Diff Editing
             </Button>
           </div>
         </div>
@@ -540,11 +541,17 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               {/* Chat Input */}
               <div className="p-4 border-t">
                 <form onSubmit={handleChatSubmit} className="flex gap-2">
-                  <Input
+                  <Textarea
                     name="message"
-                    type="text"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={aiEditor.isAIProcessing}
+                    className="resize-none max-h-32"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        e.currentTarget.form?.requestSubmit();
+                      }
+                    }}
                   />
                   <Button 
                     type="submit"
@@ -603,11 +610,17 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               {/* Chat Input */}
               <div className="p-4 border-t">
                 <form onSubmit={handleChatSubmit} className="flex gap-2">
-                  <Input
+                  <Textarea
                     name="message"
-                    type="text"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={morphEditor.isProcessing}
+                    className="resize-none max-h-32"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        e.currentTarget.form?.requestSubmit();
+                      }
+                    }}
                   />
                   <Button 
                     type="submit"

@@ -10,6 +10,7 @@ import MonacoLaTeXEditor from './MonacoLaTeXEditor';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea'; // ⭐ Add this import
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -313,18 +314,25 @@ export default function GuestLaTeXEditor() {
               {/* Chat Input */}
               <div className="p-4 border-t">
                 <form onSubmit={handleChatSubmit} className="flex gap-2">
-                  <Input
+                  <Textarea
                     name="message"
-                    type="text"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={aiEditor.isAIProcessing}
+                    className="resize-none max-h-32"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        e.currentTarget.form?.requestSubmit();
+                      }
+                    }}
                   />
-                  <Button 
+                  <button 
                     type="submit"
                     disabled={aiEditor.isAIProcessing}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
                   >
                     Send
-                  </Button>
+                  </button>
                 </form>
               </div>
             </div>
@@ -375,18 +383,25 @@ export default function GuestLaTeXEditor() {
               {/* Chat Input */}
               <div className="p-4 border-t">
                 <form onSubmit={handleChatSubmit} className="flex gap-2">
-                  <Input
+                  <Textarea
                     name="message"
-                    type="text"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={morphEditor.isProcessing}
+                    className="resize-none max-h-32"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        e.currentTarget.form?.requestSubmit();
+                      }
+                    }}
                   />
-                  <Button 
+                  <button 
                     type="submit"
                     disabled={morphEditor.isProcessing}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
                   >
                     Send
-                  </Button>
+                  </button>
                 </form>
               </div>
             </div>

@@ -21,7 +21,7 @@ export function useMorphEditor(
       {
         id: '1',
         type: 'assistant',
-        content: 'Hello! I\'m your AI LaTeX assistant with Morph-powered editing. I can propose specific changes to your document that you can review and apply individually. What would you like to work on?',
+        content: 'Hello! I\'m your AI LaTeX assistant with diff-based editing. I can propose specific changes to your document that you can review and apply individually. What would you like to work on?',
         timestamp: new Date()
       }
     ],

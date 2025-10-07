@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+// Use service role key for server-side operations
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!, // ⭐ Service role key, not anon key
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function POST(request: NextRequest) {
   try {
-    // Step 1: Get the LaTeX code from the request body
     const body = await request.json();
     const { latex } = body;
 
-    // Step 2: Validate that we have LaTeX code
     if (!latex || typeof latex !== 'string') {
       return NextResponse.json(
         { error: 'LaTeX code is required' },
@@ -14,34 +25,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 3: Check if the LaTeX code is too large (prevent abuse)
-    if (latex.length > 100000) { // 100KB limit
+    // Generate a unique filename
+    const filename = `temp-latex-${Date.now()}-${Math.random().toString(36).substring(7)}.tex`;
+    const filePath = `temp/${filename}`;
+
+    // Step 1: Upload LaTeX content to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('latex-files')
+      .upload(filePath, latex, {
+        contentType: 'text/plain',
+        cacheControl: '0',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
       return NextResponse.json(
-        { error: 'LaTeX document is too large' },
-        { status: 400 }
+        { error: `Failed to upload LaTeX file: ${uploadError.message}` },
+        { status: 500 }
       );
     }
 
-    // Step 4: Call LaTeX.Online API using GET request with text parameter
-    // Based on the documentation, we need to use GET with query parameters
-    const encodedLatex = encodeURIComponent(latex);
-    const latexOnlineUrl = `https://latexonline.cc/compile?text=${encodedLatex}&command=pdflatex`;
+    // Step 2: Get public URL for the file
+    const { data: urlData } = supabase.storage
+      .from('latex-files')
+      .getPublicUrl(filePath);
+
+    const publicUrl = urlData.publicUrl;
+
+    // Step 3: Call LaTeX Online with the URL
+    const latexOnlineUrl = `https://latexonline.cc/compile?url=${encodeURIComponent(publicUrl)}&command=pdflatex`;
     
     const latexOnlineResponse = await fetch(latexOnlineUrl, {
       method: 'GET',
-      // Add timeout to prevent hanging requests
-      signal: AbortSignal.timeout(30000) // 30 second timeout
+      signal: AbortSignal.timeout(60000)
     });
 
-    // Step 5: Check if LaTeX.Online responded successfully
+    // Step 4: Delete the temporary file (don't wait for it)
+    supabase.storage
+      .from('latex-files')
+      .remove([filePath])
+      .catch(err => console.error('Failed to delete temp file:', err));
+
+    // Step 5: Check compilation result
     if (!latexOnlineResponse.ok) {
-      // Try to get error details from LaTeX.Online
       let errorMessage = 'LaTeX compilation failed';
       try {
         const errorData = await latexOnlineResponse.text();
         errorMessage = errorData || errorMessage;
       } catch (e) {
-        // If we can't parse the error, use default message
+        // Use default error message
       }
 
       return NextResponse.json(
@@ -50,10 +83,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 6: Get the PDF data
+    // Step 6: Return the PDF
     const pdfBuffer = await latexOnlineResponse.arrayBuffer();
 
-    // Step 7: Return the PDF to the frontend
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
@@ -65,11 +97,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    // Step 8: Handle any unexpected errors
     console.error('LaTeX compilation error:', error);
     
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }
