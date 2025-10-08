@@ -46,6 +46,7 @@ interface LaTeXEditorProps {
 
 export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   const [latexCode, setLatexCode] = useState(document.current_latex);
+  const [currentLatexContent, setCurrentLatexContent] = useState(document.current_latex);
   const [editingMode, setEditingMode] = useState<EditingMode>('morph');
   const [isSaving, setIsSaving] = useState(false);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -93,6 +94,9 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   useEffect(() => {
     // Don't auto-save if viewing an old version
     if (isViewingVersion) return;
+
+    // Update the current content tracker
+    setCurrentLatexContent(latexCode);
 
     // Clear any existing timeout
     if (saveTimeoutRef.current) {
@@ -166,7 +170,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     if (versionId === 'current') {
       setSelectedVersion(null);
       setIsViewingVersion(false);
-      setLatexCode(document.current_latex);
+      setLatexCode(currentLatexContent);  // ← Use the tracked current content instead!
     } else {
       const version = versions.find(v => v.id === versionId);
       if (version) {
@@ -183,6 +187,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     
     setIsViewingVersion(false);
     setSelectedVersion(null);
+    setCurrentLatexContent(selectedVersion.latex_content);  // ← Also update the tracker
     // latexCode is already set to the version content, auto-save will handle the rest
   };
 
@@ -534,13 +539,14 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               )}
               
               {/* Chat Input */}
-              <div className="p-4 border-t">
-                <form onSubmit={handleChatSubmit} className="flex gap-2">
-                  <Textarea
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <form onSubmit={handleChatSubmit} className="relative">
+                  <textarea
                     name="message"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={aiEditor.isAIProcessing}
-                    className="resize-none max-h-32"
+                    rows={3}
+                    className="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -548,12 +554,26 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                       }
                     }}
                   />
-                  <Button 
+                  <button 
                     type="submit"
                     disabled={aiEditor.isAIProcessing}
+                    className="absolute bottom-3 right-2.5 w-8 h-8 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    title="Send message (Enter)"
                   >
-                    Send
-                  </Button>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                      className="w-4 h-4"
+                    >
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
                 </form>
               </div>
             </div>
@@ -605,13 +625,14 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               </div>
               
               {/* Chat Input */}
-              <div className="p-4 border-t">
-                <form onSubmit={handleChatSubmit} className="flex gap-2">
-                  <Textarea
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <form onSubmit={handleChatSubmit} className="relative">
+                  <textarea
                     name="message"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={morphEditor.isProcessing}
-                    className="resize-none max-h-32"
+                    rows={3}
+                    className="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -619,12 +640,26 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                       }
                     }}
                   />
-                  <Button 
+                  <button 
                     type="submit"
                     disabled={morphEditor.isProcessing}
+                    className="absolute bottom-3 right-2.5 w-8 h-8 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    title="Send message (Enter)"
                   >
-                    Send
-                  </Button>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                      className="w-4 h-4"
+                    >
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
                 </form>
               </div>
             </div>
