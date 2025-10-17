@@ -4,7 +4,8 @@ import {
   ProposedChange, 
   ChatMessage, 
   MorphEditRequest,
-  MorphApplyRequest 
+  MorphApplyRequest,
+  MorphEditResponse 
 } from '@/lib/morph-types';
 
 export function useMorphEditor(
@@ -89,7 +90,7 @@ export function useMorphEditor(
       }));
 
       let buffer = '';
-      let latestPartial: any = {};
+      let latestPartial: Partial<{ message: string; changes: ProposedChange[]; confidence: number }> = {};
 
       while (true) {
         const { done, value } = await reader.read();
@@ -151,11 +152,11 @@ export function useMorphEditor(
       if (latestPartial.message && latestPartial.changes) {
         setState(prev => ({
           ...prev,
-          proposedChanges: latestPartial.changes,
+          proposedChanges: latestPartial.changes || [],
           hasActiveProposal: true,
           chatMessages: prev.chatMessages.map(msg => 
             msg.id === assistantMessageId 
-              ? { ...msg, content: latestPartial.message }
+              ? { ...msg, content: latestPartial.message || '' }
               : msg
           )
         }));
