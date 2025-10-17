@@ -478,34 +478,52 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               <div className="flex-1 p-4 overflow-auto">
                 <div className="space-y-3">
                   {aiEditor.chatMessages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`p-3 rounded-lg ${
-                        message.type === 'user'
-                          ? 'bg-primary text-primary-foreground ml-8'
-                          : 'bg-muted mr-8'
-                      }`}
-                    >
-                      <p className="text-sm">{message.content}</p>
-                      <p className="text-xs opacity-70 mt-1">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
+                    <div key={message.id}>
+                      {message.type === 'user' ? (
+                        <div className="p-3 rounded-lg bg-primary text-primary-foreground ml-8">
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <p className="text-xs opacity-70 mt-1">
+                            {message.timestamp.toLocaleTimeString()}
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          {(() => {
+                            // Check if message contains LaTeX code
+                            const separator = '\n\n--- LaTeX Code ---\n\n';
+                            const parts = message.content.split(separator);
+                            
+                            if (parts.length === 2) {
+                              // Has both message and LaTeX code
+                              return (
+                                <>
+                                  <p className="text-sm whitespace-pre-wrap mb-3">{parts[0]}</p>
+                                  <div className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-3 mt-2">
+                                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">LaTeX Code</p>
+                                    <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto text-gray-900 dark:text-gray-100">
+                                      {parts[1]}
+                                    </pre>
+                                  </div>
+                                </>
+                              );
+                            } else {
+                              // Just message, no LaTeX code yet
+                              return <p className="text-sm whitespace-pre-wrap">{message.content}</p>;
+                            }
+                          })()}
+                          <p className="text-xs opacity-70 mt-1">
+                            {message.timestamp.toLocaleTimeString()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
                   
-                  {aiEditor.isAIProcessing && (
-                    <div className="bg-muted p-3 rounded-lg mr-8">
-                      <div className="flex items-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                        <p className="text-sm text-muted-foreground">AI is thinking...</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
               
-              {/* AI Proposal */}
-              {aiEditor.aiProposal && (
+              {/* AI Proposal - only show after streaming is complete */}
+              {aiEditor.aiProposal && !aiEditor.isAIProcessing && (
                 <div className="border-t p-4">
                   <Alert>
                     <AlertDescription className="space-y-3">
