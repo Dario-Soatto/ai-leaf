@@ -477,7 +477,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               {/* Chat Messages */}
               <div className="flex-1 p-4 overflow-auto">
                 <div className="space-y-3">
-                  {aiEditor.chatMessages.map((message) => (
+                  {aiEditor.chatMessages.map((message, index) => (
                     <div key={message.id}>
                       {message.type === 'user' ? (
                         <div className="p-3 rounded-lg bg-primary text-primary-foreground ml-8">
@@ -489,27 +489,37 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                       ) : (
                         <div>
                           {(() => {
+                            // Show loading indicator at the top if processing
+                            const isLastMessage = index === aiEditor.chatMessages.length - 1;
+                            const showLoading = aiEditor.isAIProcessing && isLastMessage;
+                            
                             // Check if message contains LaTeX code
                             const separator = '\n\n--- LaTeX Code ---\n\n';
                             const parts = message.content.split(separator);
                             
-                            if (parts.length === 2) {
-                              // Has both message and LaTeX code
-                              return (
-                                <>
-                                  <p className="text-sm whitespace-pre-wrap mb-3">{parts[0]}</p>
-                                  <div className="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md p-3 mt-2">
-                                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">LaTeX Code</p>
-                                    <pre className="text-xs font-mono whitespace-pre-wrap overflow-x-auto text-gray-900 dark:text-gray-100">
-                                      {parts[1]}
-                                    </pre>
+                            return (
+                              <>
+                                {showLoading && (
+                                  <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                    <span className="font-medium">Generating...</span>
                                   </div>
-                                </>
-                              );
-                            } else {
-                              // Just message, no LaTeX code yet
-                              return <p className="text-sm whitespace-pre-wrap">{message.content}</p>;
-                            }
+                                )}
+                                
+                                {parts.length === 2 ? (
+                                  // Has both message and LaTeX code
+                                  <>
+                                    <p className="text-sm whitespace-pre-wrap mb-3">{parts[0]}</p>
+                                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200 mt-2">
+                                      <pre className="whitespace-pre-wrap">{parts[1]}</pre>
+                                    </div>
+                                  </>
+                                ) : (
+                                  // Just message, no LaTeX code yet
+                                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                )}
+                              </>
+                            );
                           })()}
                           <p className="text-xs opacity-70 mt-1">
                             {message.timestamp.toLocaleTimeString()}
@@ -519,6 +529,15 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                     </div>
                   ))}
                   
+                  {/* Show loading indicator after all messages if processing and no assistant message yet */}
+                  {aiEditor.isAIProcessing && 
+                   (aiEditor.chatMessages.length === 0 || 
+                    aiEditor.chatMessages[aiEditor.chatMessages.length - 1]?.type === 'user') && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span className="font-medium">Generating...</span>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -612,6 +631,14 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                         </div>
                       ) : (
                         <div>
+                          {/* Show loading indicator at the top if processing */}
+                          {morphEditor.isProcessing && index === morphEditor.chatMessages.length - 1 && (
+                            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                              <span className="font-medium">Generating...</span>
+                            </div>
+                          )}
+                          
                           <p className="text-sm whitespace-pre-wrap mb-3">{message.content}</p>
                           
                           {/* Show proposed changes for the last assistant message */}
@@ -638,7 +665,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                                   {change.codeEdit && (
                                     <div className="mb-3">
                                       <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Preview:</div>
-                                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200 max-h-32 overflow-y-auto">
+                                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200">
                                         <pre className="whitespace-pre-wrap">{change.codeEdit}</pre>
                                       </div>
                                     </div>
@@ -695,6 +722,16 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                       )}
                     </div>
                   ))}
+                  
+                  {/* Show loading indicator after all messages if processing and no assistant message yet */}
+                  {morphEditor.isProcessing && 
+                   (morphEditor.chatMessages.length === 0 || 
+                    morphEditor.chatMessages[morphEditor.chatMessages.length - 1]?.type === 'user') && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span className="font-medium">Generating...</span>
+                    </div>
+                  )}
                 </div>
               </div>
               
