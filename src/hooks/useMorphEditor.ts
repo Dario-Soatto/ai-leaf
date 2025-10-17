@@ -50,6 +50,8 @@ export function useMorphEditor(
     }));
 
     try {
+      console.log('[Frontend Morph] Starting fetch to /api/ai/morph-edit');
+      
       const response = await fetch('/api/ai/morph-edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,26 +61,108 @@ export function useMorphEditor(
         } as MorphEditRequest),
       });
 
+      console.log('[Frontend Morph] Response received:', {
+        ok: response.ok,
+        status: response.status,
+        contentType: response.headers.get('Content-Type')
+      });
+
       if (!response.ok) throw new Error('AI request failed');
 
-      const result = await response.json();
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
       
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+      if (!reader) throw new Error('No response body');
+
+      console.log('[Frontend Morph] Starting to read stream...');
+
+      const assistantMessageId = (Date.now() + 1).toString();
+      const initialAiMessage: ChatMessage = {
+        id: assistantMessageId,
         type: 'assistant',
-        content: result.message,
+        content: 'Thinking...',
         timestamp: new Date()
       };
-
       setState(prev => ({
         ...prev,
-        proposedChanges: result.changes,
-        hasActiveProposal: true,
-        chatMessages: [...prev.chatMessages, aiMessage]
+        chatMessages: [...prev.chatMessages, initialAiMessage]
       }));
 
+      let buffer = '';
+      let latestPartial: any = {};
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('[Frontend Morph] Stream done');
+          break;
+        }
+        
+        const decoded = decoder.decode(value, { stream: true });
+        buffer += decoded;
+        
+        // Process complete lines (separated by \n)
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
+          try {
+            const partialObject = JSON.parse(line);
+            latestPartial = partialObject;
+            
+            // Update the AI message with partial content
+            if (partialObject.message) {
+              setState(prev => ({
+                ...prev,
+                chatMessages: prev.chatMessages.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, content: partialObject.message }
+                    : msg
+                )
+              }));
+            }
+            
+            // Update proposed changes as they arrive
+            if (partialObject.changes && partialObject.changes.length > 0) {
+              setState(prev => ({
+                ...prev,
+                proposedChanges: partialObject.changes,
+                hasActiveProposal: true
+              }));
+            }
+            
+            // Force React to flush and re-render after EACH line
+            await new Promise(resolve => requestAnimationFrame(resolve));
+          } catch (e) {
+            // JSON is incomplete, continue
+          }
+        }
+      }
+
+      console.log('[Frontend Morph] Final state:', {
+        hasMessage: !!latestPartial.message,
+        changeCount: latestPartial.changes?.length || 0
+      });
+
+      // Set the final complete result
+      if (latestPartial.message && latestPartial.changes) {
+        setState(prev => ({
+          ...prev,
+          proposedChanges: latestPartial.changes,
+          hasActiveProposal: true,
+          chatMessages: prev.chatMessages.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: latestPartial.message }
+              : msg
+          )
+        }));
+      }
+
     } catch (error) {
-      console.error('Morph AI edit error:', error);
+      console.error('[Frontend Morph] AI edit error:', error);
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -92,6 +176,7 @@ export function useMorphEditor(
       }));
     } finally {
       setState(prev => ({ ...prev, isProcessing: false }));
+      console.log('[Frontend Morph] Processing complete');
     }
   }, [latexCode]);
 

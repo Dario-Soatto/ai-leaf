@@ -601,45 +601,101 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               {/* Chat Messages */}
               <div className="flex-1 p-4 overflow-auto">
                 <div className="space-y-3">
-                  {morphEditor.chatMessages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`p-3 rounded-lg ${
-                        message.type === 'user'
-                          ? 'bg-primary text-primary-foreground ml-8'
-                          : 'bg-muted mr-8'
-                      }`}
-                    >
-                      <p className="text-sm">{message.content}</p>
-                      <p className="text-xs opacity-70 mt-1">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
+                  {morphEditor.chatMessages.map((message, index) => (
+                    <div key={message.id}>
+                      {message.type === 'user' ? (
+                        <div className="p-3 rounded-lg bg-primary text-primary-foreground ml-8">
+                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                          <p className="text-xs opacity-70 mt-1">
+                            {message.timestamp.toLocaleTimeString()}
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-sm whitespace-pre-wrap mb-3">{message.content}</p>
+                          
+                          {/* Show proposed changes for the last assistant message */}
+                          {index === morphEditor.chatMessages.length - 1 && 
+                           morphEditor.proposedChanges.length > 0 && (
+                            <div className="space-y-3 mt-3">
+                              {morphEditor.proposedChanges.map((change) => (
+                                <div key={change.id} className="border border-blue-200 dark:border-blue-800 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20">
+                                  {/* Change Description */}
+                                  {change.description && (
+                                    <div className="mb-2">
+                                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                                        {change.description}
+                                      </h4>
+                                      {change.confidence !== undefined && (
+                                        <div className="text-xs text-blue-600 dark:text-blue-400">
+                                          Confidence: {Math.round(change.confidence * 100)}%
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Code Preview */}
+                                  {change.codeEdit && (
+                                    <div className="mb-3">
+                                      <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Preview:</div>
+                                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200 max-h-32 overflow-y-auto">
+                                        <pre className="whitespace-pre-wrap">{change.codeEdit}</pre>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Action Buttons - only show when streaming is done */}
+                                  {!morphEditor.isProcessing && change.description && change.codeEdit && (
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => morphEditor.applyChange(change.id)}
+                                        disabled={morphEditor.applyingChangeId === change.id || (morphEditor.applyingChangeId !== null && morphEditor.applyingChangeId !== change.id)}
+                                        className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        {morphEditor.applyingChangeId === change.id ? 'Applying...' : 'Apply'}
+                                      </button>
+                                      <button
+                                        onClick={() => morphEditor.rejectChange(change.id)}
+                                        disabled={morphEditor.applyingChangeId !== null}
+                                        className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                              
+                              {/* Apply All / Reject All buttons - only when streaming is done */}
+                              {!morphEditor.isProcessing && morphEditor.proposedChanges.length > 1 && (
+                                <div className="flex gap-2 pt-2">
+                                  <button
+                                    onClick={morphEditor.applyAllChanges}
+                                    disabled={morphEditor.isApplyingAll || morphEditor.applyingChangeId !== null}
+                                    className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors font-medium"
+                                  >
+                                    {morphEditor.isApplyingAll ? 'Applying All...' : 'Apply All'}
+                                  </button>
+                                  <button
+                                    onClick={morphEditor.rejectAllChanges}
+                                    disabled={morphEditor.isApplyingAll || morphEditor.applyingChangeId !== null}
+                                    className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors font-medium"
+                                  >
+                                    Reject All
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          <p className="text-xs opacity-70 mt-1">
+                            {message.timestamp.toLocaleTimeString()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
-                  
-                  {morphEditor.isProcessing && (
-                    <div className="bg-muted p-3 rounded-lg mr-8">
-                      <div className="flex items-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                        <p className="text-sm text-muted-foreground">AI is thinking...</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
-              
-              {/* Morph Proposals */}
-              <div className="flex-shrink-0">
-                <MorphProposalPanel
-                  changes={morphEditor.proposedChanges}
-                  onApplyChange={morphEditor.applyChange}
-                  onRejectChange={morphEditor.rejectChange}
-                  onApplyAll={morphEditor.applyAllChanges}
-                  onRejectAll={morphEditor.rejectAllChanges}
-                  isProcessing={morphEditor.isProcessing}
-                  applyingChangeId={morphEditor.applyingChangeId}
-                  isApplyingAll={morphEditor.isApplyingAll}
-                />
               </div>
               
               {/* Chat Input */}

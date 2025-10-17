@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { anthropic } from '@ai-sdk/anthropic';
-import { generateObject } from 'ai';
+import { streamObject } from 'ai';
 import { z } from 'zod';
-import { MorphEditRequest, MorphEditResponse, ProposedChange } from '@/lib/morph-types';
+import { ProposedChange } from '@/lib/morph-types';
 import { randomUUID } from 'crypto';
 
 // Zod schema for a single proposed change (without ID - we'll generate that)
@@ -22,26 +22,28 @@ const MorphEditResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { currentLatex, userRequest } = body as MorphEditRequest;
+    const { currentLatex, userRequest } = body;
 
     // Validate input
     if (!currentLatex || !userRequest) {
-      return NextResponse.json(
-        { error: 'Both currentLatex and userRequest are required' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'Both currentLatex and userRequest are required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     if (typeof currentLatex !== 'string' || typeof userRequest !== 'string') {
-      return NextResponse.json(
-        { error: 'currentLatex and userRequest must be strings' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'currentLatex and userRequest must be strings' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Call AI to generate proposed changes
-    const result = await generateObject({
-      model: anthropic('claude-sonnet-4-20250514'), // ⭐ Correct Claude Sonnet 4 name
+    console.log('[Backend Morph] Starting streamObject...');
+
+    // Call streamObject
+    const result = streamObject({
+      model: anthropic('claude-sonnet-4-20250514'),
       schema: MorphEditResponseSchema,
       prompt: `You are a LaTeX expert. The user wants to modify their LaTeX document.
 
@@ -75,28 +77,64 @@ Guidelines:
 Return multiple individual changes that can be applied separately.`
     });
 
-    // Generate unique IDs for each change
-    const changesWithIds: ProposedChange[] = result.object.changes.map(change => ({
-      id: randomUUID(),
-      description: change.description,
-      codeEdit: change.codeEdit,
-      confidence: change.confidence
-    }));
+    console.log('[Backend Morph] streamObject created, starting to iterate...');
 
-    const response: MorphEditResponse = {
-      message: result.object.message,
-      changes: changesWithIds,
-      confidence: result.object.confidence
-    };
+    // Create a custom streaming response using partialObjectStream
+    const encoder = new TextEncoder();
+    let chunkCount = 0;
+    
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          console.log('[Backend Morph] Stream started');
+          for await (const partialObject of result.partialObjectStream) {
+            chunkCount++;
+            
+            // Generate unique IDs for each change in this partial object
+            const partialWithIds = {
+              message: partialObject.message,
+              changes: partialObject.changes?.map(change => ({
+                id: randomUUID(),
+                description: change?.description,
+                codeEdit: change?.codeEdit,
+                confidence: change?.confidence
+              })).filter(change => change.description || change.codeEdit) || [],
+              confidence: partialObject.confidence
+            };
+            
+            console.log(`[Backend Morph] Chunk ${chunkCount}:`, {
+              hasMessage: !!partialWithIds.message,
+              changeCount: partialWithIds.changes.length,
+              hasConfidence: partialWithIds.confidence !== undefined
+            });
+            
+            // Send each partial object as a line of JSON
+            const chunk = JSON.stringify(partialWithIds) + '\n';
+            controller.enqueue(encoder.encode(chunk));
+          }
+          console.log(`[Backend Morph] Stream complete. Total chunks: ${chunkCount}`);
+          controller.close();
+        } catch (error) {
+          console.error('[Backend Morph] Stream error:', error);
+          controller.error(error);
+        }
+      }
+    });
 
-    return NextResponse.json(response);
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'application/x-ndjson',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
 
   } catch (error) {
-    console.error('Morph AI edit error:', error);
+    console.error('[Backend Morph] AI edit error:', error);
     
-    return NextResponse.json(
-      { error: 'Failed to process AI request' },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: 'Failed to process AI request' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }

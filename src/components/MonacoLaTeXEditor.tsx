@@ -41,6 +41,12 @@ export default function MonacoLaTeXEditor({
 
     changes.forEach(change => {
       const codeEdit = change.codeEdit;
+      
+      // Skip changes that don't have codeEdit yet (streaming in progress)
+      if (!codeEdit) {
+        return;
+      }
+      
       const editLines = codeEdit.split('\n');
       
       // Find where this change should be applied by looking for context
