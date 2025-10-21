@@ -12,6 +12,8 @@ export interface AIProposal {
   newLatexCode: string;
   confidence: number;
   changes: string[];
+  isApplied?: boolean;
+  isRejected?: boolean;  // ⭐ ADD THIS
 }
 
 export function useAIEditor(
@@ -183,9 +185,11 @@ export function useAIEditor(
         saveToUndoStack();
         
         setLatexCode(aiProposal.newLatexCode);
-        setAIProposal(null);
-        setCompileError(null);
         
+        // ⭐ MARK AS APPLIED instead of removing
+        setAIProposal({ ...aiProposal, isApplied: true });
+        
+        setCompileError(null);
         setIsApplying(false);
         
         // Compile after accepting (not included in loading state)
@@ -197,8 +201,11 @@ export function useAIEditor(
   }, [aiProposal, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
 
   const rejectAIProposal = useCallback(() => {
-    setAIProposal(null);
-  }, []);
+    if (aiProposal) {
+      // ⭐ MARK AS REJECTED instead of removing
+      setAIProposal({ ...aiProposal, isRejected: true });
+    }
+  }, [aiProposal]);
 
   return {
     isAIProcessing,

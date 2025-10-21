@@ -601,14 +601,36 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                                 
                                 {/* ⭐ SHOW PROPOSAL INLINE - streams live */}
                                 {isLastMessage && aiEditor.aiProposal && (
-                                  <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 mt-3">
+                                  <div className={`border rounded-lg p-3 mt-3 ${
+                                    aiEditor.aiProposal.isApplied 
+                                      ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
+                                      : aiEditor.aiProposal.isRejected
+                                      ? 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20'
+                                      : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                                  }`}>
                                     {/* Description and Confidence */}
                                     <div className="mb-2">
-                                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
-                                        Proposed Complete Rewrite
+                                      <h4 className={`text-sm font-medium mb-1 ${
+                                        aiEditor.aiProposal.isApplied
+                                          ? 'text-green-800 dark:text-green-200'
+                                          : aiEditor.aiProposal.isRejected
+                                          ? 'text-gray-600 dark:text-gray-400'
+                                          : 'text-blue-800 dark:text-blue-200'
+                                      }`}>
+                                        {aiEditor.aiProposal.isApplied 
+                                          ? '✓ Applied Complete Rewrite' 
+                                          : aiEditor.aiProposal.isRejected
+                                          ? '✗ Rejected Complete Rewrite'
+                                          : 'Proposed Complete Rewrite'}
                                       </h4>
                                       {aiEditor.aiProposal.confidence !== undefined && aiEditor.aiProposal.confidence > 0 && (
-                                        <div className="text-xs text-blue-600 dark:text-blue-400">
+                                        <div className={`text-xs ${
+                                          aiEditor.aiProposal.isApplied
+                                            ? 'text-green-600 dark:text-green-400'
+                                            : aiEditor.aiProposal.isRejected
+                                            ? 'text-gray-500 dark:text-gray-500'
+                                            : 'text-blue-600 dark:text-blue-400'
+                                        }`}>
                                           Confidence: {Math.round(aiEditor.aiProposal.confidence * 100)}%
                                         </div>
                                       )}
@@ -626,8 +648,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                                       </div>
                                     )}
 
-                                    {/* Action Buttons - only when streaming is done */}
-                                    {!aiEditor.isAIProcessing && (
+                                    {/* Action Buttons - only when streaming is done AND not applied/rejected */}
+                                    {!aiEditor.isAIProcessing && !aiEditor.aiProposal.isApplied && !aiEditor.aiProposal.isRejected && (
                                       <div className="flex gap-2">
                                         <button
                                           onClick={aiEditor.acceptAIProposal}
@@ -741,15 +763,33 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                            morphEditor.proposedChanges.length > 0 && (
                             <div className="space-y-3 mt-3">
                               {morphEditor.proposedChanges.map((change) => (
-                                <div key={change.id} className="border border-blue-200 dark:border-blue-800 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20">
+                                <div key={change.id} className={`border rounded-lg p-3 ${
+                                  change.isApplied
+                                    ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
+                                    : change.isRejected
+                                    ? 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20'
+                                    : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                                }`}>
                                   {/* Change Description */}
                                   {change.description && (
                                     <div className="mb-2">
-                                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
-                                        {change.description}
+                                      <h4 className={`text-sm font-medium mb-1 ${
+                                        change.isApplied
+                                          ? 'text-green-800 dark:text-green-200'
+                                          : change.isRejected
+                                          ? 'text-gray-600 dark:text-gray-400'
+                                          : 'text-blue-800 dark:text-blue-200'
+                                      }`}>
+                                        {change.isApplied ? '✓ ' : change.isRejected ? '✗ ' : ''}{change.description}
                                       </h4>
                                       {change.confidence !== undefined && (
-                                        <div className="text-xs text-blue-600 dark:text-blue-400">
+                                        <div className={`text-xs ${
+                                          change.isApplied
+                                            ? 'text-green-600 dark:text-green-400'
+                                            : change.isRejected
+                                            ? 'text-gray-500 dark:text-gray-500'
+                                            : 'text-blue-600 dark:text-blue-400'
+                                        }`}>
                                           Confidence: {Math.round(change.confidence * 100)}%
                                         </div>
                                       )}
@@ -766,8 +806,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                                     </div>
                                   )}
 
-                                  {/* Action Buttons - only show when streaming is done */}
-                                  {!morphEditor.isProcessing && change.description && change.codeEdit && (
+                                  {/* Action Buttons - only show when streaming is done AND not applied/rejected */}
+                                  {!morphEditor.isProcessing && !change.isApplied && !change.isRejected && change.description && change.codeEdit && (
                                     <div className="flex gap-2">
                                       <button
                                         onClick={() => morphEditor.applyChange(change.id)}
@@ -788,8 +828,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                                 </div>
                               ))}
                               
-                              {/* Apply All / Reject All buttons - only when streaming is done */}
-                              {!morphEditor.isProcessing && morphEditor.proposedChanges.length > 1 && (
+                              {/* Apply All / Reject All buttons - only show for pending changes */}
+                              {!morphEditor.isProcessing && morphEditor.proposedChanges.filter(c => !c.isApplied && !c.isRejected).length > 1 && (
                                 <div className="flex gap-2 pt-2">
                                   <button
                                     onClick={morphEditor.applyAllChanges}

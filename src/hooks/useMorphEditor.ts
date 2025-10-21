@@ -213,10 +213,13 @@ export function useMorphEditor(
       setLatexCode(result.mergedCode);
       setCompileError(null);
       
+      // ⭐ MARK AS APPLIED instead of removing
       setState(prev => ({
         ...prev,
-        proposedChanges: prev.proposedChanges.filter(c => c.id !== changeId),
-        hasActiveProposal: prev.proposedChanges.length > 1
+        proposedChanges: prev.proposedChanges.map(c => 
+          c.id === changeId ? { ...c, isApplied: true } : c
+        ),
+        hasActiveProposal: prev.proposedChanges.some(c => c.id !== changeId && !c.isApplied)
       }));
 
       setApplyingChangeId(null);
@@ -233,8 +236,11 @@ export function useMorphEditor(
   const rejectChange = useCallback((changeId: string) => {
     setState(prev => ({
       ...prev,
-      proposedChanges: prev.proposedChanges.filter(c => c.id !== changeId),
-      hasActiveProposal: prev.proposedChanges.length > 1
+      // ⭐ MARK AS REJECTED instead of removing
+      proposedChanges: prev.proposedChanges.map(c => 
+        c.id === changeId ? { ...c, isRejected: true } : c
+      ),
+      hasActiveProposal: prev.proposedChanges.some(c => !c.isApplied && !c.isRejected)
     }));
   }, []);
 
@@ -248,7 +254,10 @@ export function useMorphEditor(
       
       let currentCode = latexCode;
       
-      for (const change of state.proposedChanges) {
+      // ⭐ Only apply non-applied changes
+      const changesToApply = state.proposedChanges.filter(c => !c.isApplied);
+      
+      for (const change of changesToApply) {
         const morphRequest: MorphApplyRequest = {
           instruction: change.description,
           originalCode: currentCode,
@@ -270,9 +279,10 @@ export function useMorphEditor(
       setLatexCode(currentCode);
       setCompileError(null);
       
+      // ⭐ MARK ALL AS APPLIED
       setState(prev => ({
         ...prev,
-        proposedChanges: [],
+        proposedChanges: prev.proposedChanges.map(c => ({ ...c, isApplied: true })),
         hasActiveProposal: false
       }));
 
@@ -290,7 +300,10 @@ export function useMorphEditor(
   const rejectAllChanges = useCallback(() => {
     setState(prev => ({
       ...prev,
-      proposedChanges: [],
+      // ⭐ MARK ALL non-applied as REJECTED
+      proposedChanges: prev.proposedChanges.map(c => 
+        c.isApplied ? c : { ...c, isRejected: true }
+      ),
       hasActiveProposal: false
     }));
   }, []);

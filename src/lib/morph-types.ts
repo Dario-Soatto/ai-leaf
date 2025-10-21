@@ -4,6 +4,8 @@ export interface ProposedChange {
   description: string; // Human-readable description of what this change does
   codeEdit: string; // The actual edit snippet in Morph format (with // ... existing code ...)
   confidence: number; // AI's confidence in this change (0-1)
+  isApplied?: boolean; // ⭐ ADD THIS
+  isRejected?: boolean;  // ⭐ ADD THIS
 }
 
 // The overall state for the Morph editor
