@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAIEditor } from '@/hooks/useAIEditor';
 import { useMorphEditor } from '@/hooks/useMorphEditor';
 import { usePDFCompiler } from '@/hooks/usePDFCompiler';
@@ -56,15 +56,41 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ⭐ ADD SHARED UNDO/REDO STATE
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
+  const MAX_HISTORY = 20;
+
   const supabase = useMemo(() => createClient(), []);
+
+  // ⭐ ADD THIS FUNCTION
+  const saveToUndoStack = useCallback(() => {
+    setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
+    setRedoStack([]); // Clear redo stack when new edit is applied
+  }, [latexCode]);
 
   // Use custom hooks
   const pdfCompiler = usePDFCompiler();
   const panelResize = usePanelResize();
   
+  // ⭐ UPDATE THESE LINES TO ADD saveToUndoStack PARAMETER
   // Use the appropriate editor hook based on mode
-  const aiEditor = useAIEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError, pdfCompiler.compileLatex);
-  const morphEditor = useMorphEditor(latexCode, setLatexCode, pdfCompiler.setPdfUrl, pdfCompiler.setCompileError, pdfCompiler.compileLatex);
+  const aiEditor = useAIEditor(
+    latexCode, 
+    setLatexCode, 
+    pdfCompiler.setPdfUrl, 
+    pdfCompiler.setCompileError, 
+    pdfCompiler.compileLatex,
+    saveToUndoStack
+  );
+  const morphEditor = useMorphEditor(
+    latexCode, 
+    setLatexCode, 
+    pdfCompiler.setPdfUrl, 
+    pdfCompiler.setCompileError, 
+    pdfCompiler.compileLatex,
+    saveToUndoStack
+  );
 
   // Auto-compile on mount
   useEffect(() => {
@@ -262,6 +288,25 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     };
   }, [latexCode, pdfCompiler.compileError]); // Dependencies: rerun when these change
 
+  // ⭐ ADD THESE UNDO/REDO FUNCTIONS
+  const undo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    
+    const previousState = undoStack[undoStack.length - 1];
+    setRedoStack(prev => [latexCode, ...prev.slice(0, MAX_HISTORY - 1)]);
+    setUndoStack(prev => prev.slice(0, -1));
+    setLatexCode(previousState);
+  }, [undoStack, latexCode]);
+
+  const redo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    
+    const nextState = redoStack[0];
+    setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
+    setRedoStack(prev => prev.slice(1));
+    setLatexCode(nextState);
+  }, [redoStack, latexCode]);
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
@@ -336,8 +381,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               {editingMode === 'complete' ? (
                 <>
                   <Button
-                    onClick={aiEditor.undo}
-                    disabled={!aiEditor.canUndo}
+                    onClick={undo}
+                    disabled={undoStack.length === 0}
                     size="sm"
                     variant="ghost"
                     title="Undo AI Edit (Cmd+Z)"
@@ -345,8 +390,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                     ↶ Undo
                   </Button>
                   <Button
-                    onClick={aiEditor.redo}
-                    disabled={!aiEditor.canRedo}
+                    onClick={redo}
+                    disabled={redoStack.length === 0}
                     size="sm"
                     variant="ghost"
                     title="Redo AI Edit (Cmd+Shift+Z)"
@@ -357,8 +402,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               ) : (
                 <>
                   <Button
-                    onClick={morphEditor.undo}
-                    disabled={!morphEditor.canUndo}
+                    onClick={undo}
+                    disabled={undoStack.length === 0}
                     size="sm"
                     variant="ghost"
                     title="Undo Morph Edit (Cmd+Z)"
@@ -366,8 +411,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                     ↶ Undo
                   </Button>
                   <Button
-                    onClick={morphEditor.redo}
-                    disabled={!morphEditor.canRedo}
+                    onClick={redo}
+                    disabled={redoStack.length === 0}
                     size="sm"
                     variant="ghost"
                     title="Redo Morph Edit (Cmd+Shift+Z)"

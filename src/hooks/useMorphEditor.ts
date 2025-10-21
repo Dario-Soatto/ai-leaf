@@ -13,7 +13,8 @@ export function useMorphEditor(
   setLatexCode: (code: string) => void, 
   setPdfUrl: (url: string | null) => void, 
   setCompileError: (error: string | null) => void,
-  compileLatex: (code: string) => Promise<void> // ⭐ Added compile function
+  compileLatex: (code: string) => Promise<void>,
+  saveToUndoStack: () => void  // ⭐ ADD THIS PARAMETER
 ) {
   const [state, setState] = useState<MorphEditorState>({
     isProcessing: false,
@@ -34,9 +35,7 @@ export function useMorphEditor(
   const [isApplyingAll, setIsApplyingAll] = useState(false);
 
   // ⭐ ADD THESE NEW LINES:
-  const [undoStack, setUndoStack] = useState<string[]>([]);
-  const [redoStack, setRedoStack] = useState<string[]>([]);
-  const MAX_HISTORY = 20;
+  
 
   const handleAIEdit = useCallback(async (userRequest: string) => {
     if (!userRequest.trim()) return;
@@ -192,9 +191,8 @@ export function useMorphEditor(
     
     setApplyingChangeId(changeId);
     try {
-      // ⭐ SAVE CURRENT STATE TO UNDO STACK BEFORE APPLYING
-      setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
-      setRedoStack([]); // Clear redo stack when new change is applied
+      // ⭐ CALL THE PARENT'S SAVE FUNCTION
+      saveToUndoStack();
       
       const morphRequest: MorphApplyRequest = {
         instruction: change.description,
@@ -230,7 +228,7 @@ export function useMorphEditor(
       setCompileError(`Failed to apply change: ${change.description}`);
       setApplyingChangeId(null);
     }
-  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
+  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
 
   const rejectChange = useCallback((changeId: string) => {
     setState(prev => ({
@@ -245,9 +243,8 @@ export function useMorphEditor(
     if (state.proposedChanges.length === 0) return;
 
     try {
-      // ⭐ SAVE CURRENT STATE TO UNDO STACK BEFORE APPLYING ALL
-      setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
-      setRedoStack([]); // Clear redo stack when new changes are applied
+      // ⭐ CALL THE PARENT'S SAVE FUNCTION
+      saveToUndoStack();
       
       let currentCode = latexCode;
       
@@ -288,7 +285,7 @@ export function useMorphEditor(
       setCompileError('Failed to apply changes. Please try again.');
       setIsApplyingAll(false);
     }
-  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
+  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
 
   const rejectAllChanges = useCallback(() => {
     setState(prev => ({
@@ -299,23 +296,7 @@ export function useMorphEditor(
   }, []);
 
   // ⭐ ADD THESE NEW FUNCTIONS:
-  const undo = useCallback(() => {
-    if (undoStack.length === 0) return;
-    
-    const previousState = undoStack[undoStack.length - 1];
-    setRedoStack(prev => [latexCode, ...prev.slice(0, MAX_HISTORY - 1)]);
-    setUndoStack(prev => prev.slice(0, -1));
-    setLatexCode(previousState);
-  }, [undoStack, latexCode, setLatexCode]);
-
-  const redo = useCallback(() => {
-    if (redoStack.length === 0) return;
-    
-    const nextState = redoStack[0];
-    setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
-    setRedoStack(prev => prev.slice(1));
-    setLatexCode(nextState);
-  }, [redoStack, latexCode, setLatexCode]);
+  // ❌ REMOVE THE undo() AND redo() FUNCTIONS
 
   return {
     isProcessing: state.isProcessing,
@@ -330,10 +311,6 @@ export function useMorphEditor(
     rejectChange,
     applyAllChanges,
     rejectAllChanges,
-    // ⭐ ADD THESE:
-    undo,
-    redo,
-    canUndo: undoStack.length > 0,
-    canRedo: redoStack.length > 0,
+    // ❌ REMOVE: undo, redo, canUndo, canRedo
   };
 }
