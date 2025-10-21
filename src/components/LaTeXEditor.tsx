@@ -329,6 +329,55 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               </Button>
             )}
           </div>
+          
+          {/* ⭐ UPDATE THIS SECTION - Show for both Complete and Morph modes */}
+          {!isViewingVersion && (
+            <div className="flex items-center gap-1 border-l pl-4 ml-2">
+              {editingMode === 'complete' ? (
+                <>
+                  <Button
+                    onClick={aiEditor.undo}
+                    disabled={!aiEditor.canUndo}
+                    size="sm"
+                    variant="ghost"
+                    title="Undo AI Edit (Cmd+Z)"
+                  >
+                    ↶ Undo
+                  </Button>
+                  <Button
+                    onClick={aiEditor.redo}
+                    disabled={!aiEditor.canRedo}
+                    size="sm"
+                    variant="ghost"
+                    title="Redo AI Edit (Cmd+Shift+Z)"
+                  >
+                    ↷ Redo
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={morphEditor.undo}
+                    disabled={!morphEditor.canUndo}
+                    size="sm"
+                    variant="ghost"
+                    title="Undo Morph Edit (Cmd+Z)"
+                  >
+                    ↶ Undo
+                  </Button>
+                  <Button
+                    onClick={morphEditor.redo}
+                    disabled={!morphEditor.canRedo}
+                    size="sm"
+                    variant="ghost"
+                    title="Redo Morph Edit (Cmd+Shift+Z)"
+                  >
+                    ↷ Redo
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </div>
         
         {/* Editing Mode Toggle */}

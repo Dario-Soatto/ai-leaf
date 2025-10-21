@@ -32,6 +32,10 @@ export function useAIEditor(
       timestamp: new Date()
     }
   ]);
+
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
+  const MAX_HISTORY = 20;
   
   const handleAIEdit = useCallback(async (userRequest: string) => {
     if (!userRequest.trim()) return;
@@ -200,6 +204,10 @@ export function useAIEditor(
     if (aiProposal) {
       setIsApplying(true);
       try {
+        // ⭐ SAVE CURRENT STATE TO UNDO STACK BEFORE APPLYING
+        setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
+        setRedoStack([]); // Clear redo stack when new edit is applied
+        
         setLatexCode(aiProposal.newLatexCode);
         setAIProposal(null);
         setCompileError(null);
@@ -212,11 +220,30 @@ export function useAIEditor(
         setIsApplying(false);
       }
     }
-  }, [aiProposal, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
+  }, [aiProposal, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex]);
 
   const rejectAIProposal = useCallback(() => {
     setAIProposal(null);
   }, []);
+
+  // ⭐ ADD THESE NEW FUNCTIONS:
+  const undo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    
+    const previousState = undoStack[undoStack.length - 1];
+    setRedoStack(prev => [latexCode, ...prev.slice(0, MAX_HISTORY - 1)]);
+    setUndoStack(prev => prev.slice(0, -1));
+    setLatexCode(previousState);
+  }, [undoStack, latexCode, setLatexCode]);
+
+  const redo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    
+    const nextState = redoStack[0];
+    setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
+    setRedoStack(prev => prev.slice(1));
+    setLatexCode(nextState);
+  }, [redoStack, latexCode, setLatexCode]);
 
   return {
     isAIProcessing,
@@ -225,6 +252,11 @@ export function useAIEditor(
     chatMessages,
     handleAIEdit,
     acceptAIProposal,
-    rejectAIProposal
+    rejectAIProposal,
+    // ⭐ ADD THESE:
+    undo,
+    redo,
+    canUndo: undoStack.length > 0,
+    canRedo: redoStack.length > 0,
   };
 }
