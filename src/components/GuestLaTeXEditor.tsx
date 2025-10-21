@@ -147,49 +147,24 @@ export default function GuestLaTeXEditor() {
           
           {/* ⭐ UPDATE THIS SECTION - Show for both Complete and Morph modes */}
           <div className="flex items-center gap-1 border-l pl-4 ml-2">
-            {editingMode === 'complete' ? (
-              <>
-                <Button
-                  onClick={undo}
-                  disabled={undoStack.length === 0}
-                  size="sm"
-                  variant="ghost"
-                  title="Undo AI Edit (Cmd+Z)"
-                >
-                  ↶ Undo
-                </Button>
-                <Button
-                  onClick={redo}
-                  disabled={redoStack.length === 0}
-                  size="sm"
-                  variant="ghost"
-                  title="Redo AI Edit (Cmd+Shift+Z)"
-                >
-                  ↷ Redo
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  onClick={undo}
-                  disabled={undoStack.length === 0}
-                  size="sm"
-                  variant="ghost"
-                  title="Undo Morph Edit (Cmd+Z)"
-                >
-                  ↶ Undo
-                </Button>
-                <Button
-                  onClick={redo}
-                  disabled={redoStack.length === 0}
-                  size="sm"
-                  variant="ghost"
-                  title="Redo Morph Edit (Cmd+Shift+Z)"
-                >
-                  ↷ Redo
-                </Button>
-              </>
-            )}
+            <Button
+              onClick={undo}
+              disabled={undoStack.length === 0}
+              size="sm"
+              variant="ghost"
+              title="Undo Edit (Cmd+Z)"
+            >
+              ↶ Undo
+            </Button>
+            <Button
+              onClick={redo}
+              disabled={redoStack.length === 0}
+              size="sm"
+              variant="ghost"
+              title="Redo Edit (Cmd+Shift+Z)"
+            >
+              ↷ Redo
+            </Button>
           </div>
         </div>
         
@@ -347,14 +322,10 @@ export default function GuestLaTeXEditor() {
                         </div>
                       ) : (
                         <div>
+                          {/* Show loading indicator at the top if processing */}
                           {(() => {
-                            // Show loading indicator at the top if processing
                             const isLastMessage = index === aiEditor.chatMessages.length - 1;
                             const showLoading = aiEditor.isAIProcessing && isLastMessage;
-                            
-                            // Check if message contains LaTeX code
-                            const separator = '\n\n--- LaTeX Code ---\n\n';
-                            const parts = message.content.split(separator);
                             
                             return (
                               <>
@@ -365,17 +336,56 @@ export default function GuestLaTeXEditor() {
                                   </div>
                                 )}
                                 
-                                {parts.length === 2 ? (
-                                  // Has both message and LaTeX code
-                                  <>
-                                    <p className="text-sm whitespace-pre-wrap mb-3">{parts[0]}</p>
-                                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200 mt-2">
-                                      <pre className="whitespace-pre-wrap">{parts[1]}</pre>
+                                {/* ⭐ JUST SHOW THE MESSAGE - NO LATEX CODE PARSING */}
+                                <p className="text-sm whitespace-pre-wrap mb-3">{message.content}</p>
+                                
+                                {/* ⭐ SHOW PROPOSAL INLINE - streams live */}
+                                {isLastMessage && aiEditor.aiProposal && (
+                                  <div className="border border-blue-200 dark:border-blue-800 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 mt-3">
+                                    {/* Description and Confidence */}
+                                    <div className="mb-2">
+                                      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                                        Proposed Complete Rewrite
+                                      </h4>
+                                      {aiEditor.aiProposal.confidence !== undefined && aiEditor.aiProposal.confidence > 0 && (
+                                        <div className="text-xs text-blue-600 dark:text-blue-400">
+                                          Confidence: {Math.round(aiEditor.aiProposal.confidence * 100)}%
+                                        </div>
+                                      )}
                                     </div>
-                                  </>
-                                ) : (
-                                  // Just message, no LaTeX code yet
-                                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+
+                                    {/* LaTeX Code Preview - STREAMS HERE */}
+                                    {aiEditor.aiProposal.newLatexCode && (
+                                      <div className="mb-3">
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                          {aiEditor.isAIProcessing ? 'Streaming preview...' : 'Preview:'}
+                                        </div>
+                                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200 max-h-48 overflow-y-auto">
+                                          <pre className="whitespace-pre-wrap">{aiEditor.aiProposal.newLatexCode}</pre>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Action Buttons - only when streaming is done */}
+                                    {!aiEditor.isAIProcessing && (
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={aiEditor.acceptAIProposal}
+                                          disabled={aiEditor.isApplying}
+                                          className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                          {aiEditor.isApplying ? 'Applying...' : 'Apply'}
+                                        </button>
+                                        <button
+                                          onClick={aiEditor.rejectAIProposal}
+                                          disabled={aiEditor.isApplying}
+                                          className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                          Reject
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </>
                             );
@@ -399,40 +409,6 @@ export default function GuestLaTeXEditor() {
                   )}
                 </div>
               </div>
-              
-              {/* AI Proposal - only show after streaming is complete */}
-              {aiEditor.aiProposal && !aiEditor.isAIProcessing && (
-                <div className="border-t p-4">
-                  <Alert>
-                    <AlertDescription className="space-y-3">
-                      <div>
-                        <h3 className="font-medium mb-1">AI Proposal</h3>
-                        <p className="text-sm">{aiEditor.aiProposal.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Confidence: {Math.round(aiEditor.aiProposal.confidence * 100)}%
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={aiEditor.acceptAIProposal}
-                          disabled={aiEditor.isApplying}
-                          size="sm"
-                          variant="default"
-                        >
-                          {aiEditor.isApplying ? 'Applying...' : 'Accept'}
-                        </Button>
-                        <Button
-                          onClick={aiEditor.rejectAIProposal}
-                          size="sm"
-                          variant="destructive"
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              )}
               
               {/* Chat Input */}
               <div className="p-4 border-t">

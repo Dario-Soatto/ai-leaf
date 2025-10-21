@@ -110,33 +110,21 @@ export function useAIEditor(
             const partialObject: Partial<AIProposal> = JSON.parse(line);
             latestPartial = partialObject;
             
-            // Build a display that shows BOTH the message and the LaTeX code as they stream
-            let displayContent = '';
-            
+            // ⭐ UPDATE: Only show the MESSAGE in chat (no LaTeX code)
             if (partialObject.message) {
-              displayContent += partialObject.message;
-            }
-            
-            if (partialObject.newLatexCode) {
-              if (displayContent) displayContent += '\n\n--- LaTeX Code ---\n\n';
-              displayContent += partialObject.newLatexCode;
-            }
-            
-            if (displayContent) {
               setChatMessages(prev => 
                 prev.map(msg => 
                   msg.id === assistantMessageId 
-                    ? { ...msg, content: displayContent }
+                    ? { ...msg, content: partialObject.message || 'Thinking...' }
                     : msg
                 )
               );
               
               // CRITICAL: Force React to flush and re-render after EACH line
-              // Use requestAnimationFrame to ensure browser paints before continuing
               await new Promise(resolve => requestAnimationFrame(resolve));
             }
             
-            // Also update the proposal panel
+            // Update the proposal panel with streaming LaTeX code
             if (partialObject.message || partialObject.newLatexCode) {
               setAIProposal({
                 message: partialObject.message || 'Generating...',
@@ -168,18 +156,8 @@ export function useAIEditor(
         console.log('[Frontend] Setting final result');
         setAIProposal(finalResult);
         
-        // Keep the LaTeX code in the chat message after streaming completes
-        const finalDisplayContent = finalResult.message + 
-          '\n\n--- LaTeX Code ---\n\n' + 
-          finalResult.newLatexCode;
-        
-        setChatMessages(prev => 
-          prev.map(msg => 
-            msg.id === assistantMessageId 
-              ? { ...msg, content: finalDisplayContent }
-              : msg
-          )
-        );
+        // ⭐ Chat message stays as-is (only the message, no LaTeX code)
+        // The LaTeX code is only in the proposal panel
       }
 
     } catch (error) {
