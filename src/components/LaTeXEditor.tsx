@@ -474,7 +474,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
             <MonacoLaTeXEditor
               value={latexCode}
               onChange={setLatexCode}
-              proposedChanges={editingMode === 'morph' ? morphEditor.proposedChanges : []}
+              proposedChanges={[]}  // ⭐ Pass empty array since we show inline now
               onApplyChange={morphEditor.applyChange}
               onRejectChange={morphEditor.rejectChange}
               readOnly={isViewingVersion}
@@ -599,67 +599,67 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                                 {/* ⭐ JUST SHOW THE MESSAGE - NO LATEX CODE PARSING */}
                                 <p className="text-sm whitespace-pre-wrap mb-3">{message.content}</p>
                                 
-                                {/* ⭐ SHOW PROPOSAL INLINE - streams live */}
-                                {isLastMessage && aiEditor.aiProposal && (
+                                {/* ⭐ SHOW PROPOSAL for this message */}
+                                {aiEditor.aiProposals[message.id] && (
                                   <div className={`border rounded-lg p-3 mt-3 ${
-                                    aiEditor.aiProposal.isApplied 
+                                    aiEditor.aiProposals[message.id].isApplied 
                                       ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
-                                      : aiEditor.aiProposal.isRejected
+                                      : aiEditor.aiProposals[message.id].isRejected
                                       ? 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20'
                                       : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
                                   }`}>
                                     {/* Description and Confidence */}
                                     <div className="mb-2">
                                       <h4 className={`text-sm font-medium mb-1 ${
-                                        aiEditor.aiProposal.isApplied
+                                        aiEditor.aiProposals[message.id].isApplied
                                           ? 'text-green-800 dark:text-green-200'
-                                          : aiEditor.aiProposal.isRejected
+                                          : aiEditor.aiProposals[message.id].isRejected
                                           ? 'text-gray-600 dark:text-gray-400'
                                           : 'text-blue-800 dark:text-blue-200'
                                       }`}>
-                                        {aiEditor.aiProposal.isApplied 
+                                        {aiEditor.aiProposals[message.id].isApplied 
                                           ? '✓ Applied Complete Rewrite' 
-                                          : aiEditor.aiProposal.isRejected
+                                          : aiEditor.aiProposals[message.id].isRejected
                                           ? '✗ Rejected Complete Rewrite'
                                           : 'Proposed Complete Rewrite'}
                                       </h4>
-                                      {aiEditor.aiProposal.confidence !== undefined && aiEditor.aiProposal.confidence > 0 && (
+                                      {aiEditor.aiProposals[message.id].confidence !== undefined && aiEditor.aiProposals[message.id].confidence > 0 && (
                                         <div className={`text-xs ${
-                                          aiEditor.aiProposal.isApplied
+                                          aiEditor.aiProposals[message.id].isApplied
                                             ? 'text-green-600 dark:text-green-400'
-                                            : aiEditor.aiProposal.isRejected
+                                            : aiEditor.aiProposals[message.id].isRejected
                                             ? 'text-gray-500 dark:text-gray-500'
                                             : 'text-blue-600 dark:text-blue-400'
                                         }`}>
-                                          Confidence: {Math.round(aiEditor.aiProposal.confidence * 100)}%
+                                          Confidence: {Math.round(aiEditor.aiProposals[message.id].confidence * 100)}%
                                         </div>
                                       )}
                                     </div>
 
                                     {/* LaTeX Code Preview - STREAMS HERE */}
-                                    {aiEditor.aiProposal.newLatexCode && (
+                                    {aiEditor.aiProposals[message.id].newLatexCode && (
                                       <div className="mb-3">
                                         <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                                           {aiEditor.isAIProcessing ? 'Streaming preview...' : 'Preview:'}
                                         </div>
                                         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200 max-h-48 overflow-y-auto">
-                                          <pre className="whitespace-pre-wrap">{aiEditor.aiProposal.newLatexCode}</pre>
+                                          <pre className="whitespace-pre-wrap">{aiEditor.aiProposals[message.id].newLatexCode}</pre>
                                         </div>
                                       </div>
                                     )}
 
                                     {/* Action Buttons - only when streaming is done AND not applied/rejected */}
-                                    {!aiEditor.isAIProcessing && !aiEditor.aiProposal.isApplied && !aiEditor.aiProposal.isRejected && (
+                                    {!aiEditor.isAIProcessing && !aiEditor.aiProposals[message.id].isApplied && !aiEditor.aiProposals[message.id].isRejected && (
                                       <div className="flex gap-2">
                                         <button
-                                          onClick={aiEditor.acceptAIProposal}
+                                          onClick={() => aiEditor.acceptAIProposal(message.id)}
                                           disabled={aiEditor.isApplying}
                                           className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
                                         >
                                           {aiEditor.isApplying ? 'Applying...' : 'Apply'}
                                         </button>
                                         <button
-                                          onClick={aiEditor.rejectAIProposal}
+                                          onClick={() => aiEditor.rejectAIProposal(message.id)}
                                           disabled={aiEditor.isApplying}
                                           className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
                                         >
@@ -758,11 +758,11 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                           
                           <p className="text-sm whitespace-pre-wrap mb-3">{message.content}</p>
                           
-                          {/* Show proposed changes for the last assistant message */}
-                          {index === morphEditor.chatMessages.length - 1 && 
-                           morphEditor.proposedChanges.length > 0 && (
+                          {/* ⭐ Show proposed changes for ANY message that has them */}
+                          {morphEditor.proposedChangesByMessage[message.id] && 
+                           morphEditor.proposedChangesByMessage[message.id].length > 0 && (
                             <div className="space-y-3 mt-3">
-                              {morphEditor.proposedChanges.map((change) => (
+                              {morphEditor.proposedChangesByMessage[message.id].map((change) => (
                                 <div key={change.id} className={`border rounded-lg p-3 ${
                                   change.isApplied
                                     ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
@@ -829,17 +829,17 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                               ))}
                               
                               {/* Apply All / Reject All buttons - only show for pending changes */}
-                              {!morphEditor.isProcessing && morphEditor.proposedChanges.filter(c => !c.isApplied && !c.isRejected).length > 1 && (
+                              {!morphEditor.isProcessing && morphEditor.proposedChangesByMessage[message.id].filter(c => !c.isApplied && !c.isRejected).length > 1 && (
                                 <div className="flex gap-2 pt-2">
                                   <button
-                                    onClick={morphEditor.applyAllChanges}
+                                    onClick={() => morphEditor.applyAllChanges(message.id)}
                                     disabled={morphEditor.isApplyingAll || morphEditor.applyingChangeId !== null}
                                     className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors font-medium"
                                   >
                                     {morphEditor.isApplyingAll ? 'Applying All...' : 'Apply All'}
                                   </button>
                                   <button
-                                    onClick={morphEditor.rejectAllChanges}
+                                    onClick={() => morphEditor.rejectAllChanges(message.id)}
                                     disabled={morphEditor.isApplyingAll || morphEditor.applyingChangeId !== null}
                                     className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors font-medium"
                                   >

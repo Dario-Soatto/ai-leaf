@@ -26,7 +26,8 @@ export function useAIEditor(
 ) {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
-  const [aiProposal, setAIProposal] = useState<AIProposal | null>(null);
+  // ⭐ CHANGE: Store proposals per message ID
+  const [aiProposals, setAIProposals] = useState<Record<string, AIProposal>>({});
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -128,12 +129,16 @@ export function useAIEditor(
             
             // Update the proposal panel with streaming LaTeX code
             if (partialObject.message || partialObject.newLatexCode) {
-              setAIProposal({
-                message: partialObject.message || 'Generating...',
-                newLatexCode: partialObject.newLatexCode || '% Generating LaTeX code...',
-                confidence: partialObject.confidence ?? 0,
-                changes: partialObject.changes ?? []
-              });
+              // ⭐ Save proposal with message ID
+              setAIProposals(prev => ({
+                ...prev,
+                [assistantMessageId]: {
+                  message: partialObject.message || 'Generating...',
+                  newLatexCode: partialObject.newLatexCode || '% Generating LaTeX code...',
+                  confidence: partialObject.confidence ?? 0,
+                  changes: partialObject.changes ?? []
+                }
+              }));
             }
           } catch (e) {
             // JSON is incomplete, continue
@@ -156,10 +161,11 @@ export function useAIEditor(
         };
         
         console.log('[Frontend] Setting final result');
-        setAIProposal(finalResult);
-        
-        // ⭐ Chat message stays as-is (only the message, no LaTeX code)
-        // The LaTeX code is only in the proposal panel
+        // ⭐ Save with message ID
+        setAIProposals(prev => ({
+          ...prev,
+          [assistantMessageId]: finalResult
+        }));
       }
 
     } catch (error) {
@@ -177,40 +183,48 @@ export function useAIEditor(
     }
   }, [latexCode]);
 
-  const acceptAIProposal = useCallback(async () => {
-    if (aiProposal) {
+  const acceptAIProposal = useCallback(async (messageId: string) => {
+    const proposal = aiProposals[messageId];
+    if (proposal) {
       setIsApplying(true);
       try {
         // ⭐ CALL THE PARENT'S SAVE FUNCTION
         saveToUndoStack();
         
-        setLatexCode(aiProposal.newLatexCode);
+        setLatexCode(proposal.newLatexCode);
         
-        // ⭐ MARK AS APPLIED instead of removing
-        setAIProposal({ ...aiProposal, isApplied: true });
+        // ⭐ MARK AS APPLIED in the map
+        setAIProposals(prev => ({
+          ...prev,
+          [messageId]: { ...proposal, isApplied: true }
+        }));
         
         setCompileError(null);
         setIsApplying(false);
         
         // Compile after accepting (not included in loading state)
-        await compileLatex(aiProposal.newLatexCode);
+        await compileLatex(proposal.newLatexCode);
       } catch (error) {
         setIsApplying(false);
       }
     }
-  }, [aiProposal, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
+  }, [aiProposals, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
 
-  const rejectAIProposal = useCallback(() => {
-    if (aiProposal) {
-      // ⭐ MARK AS REJECTED instead of removing
-      setAIProposal({ ...aiProposal, isRejected: true });
+  const rejectAIProposal = useCallback((messageId: string) => {
+    const proposal = aiProposals[messageId];
+    if (proposal) {
+      // ⭐ MARK AS REJECTED in the map
+      setAIProposals(prev => ({
+        ...prev,
+        [messageId]: { ...proposal, isRejected: true }
+      }));
     }
-  }, [aiProposal]);
+  }, [aiProposals]);
 
   return {
     isAIProcessing,
     isApplying,
-    aiProposal,
+    aiProposals,  // ⭐ Return the map instead of single proposal
     chatMessages,
     handleAIEdit,
     acceptAIProposal,

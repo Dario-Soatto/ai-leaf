@@ -14,11 +14,17 @@ export function useMorphEditor(
   setPdfUrl: (url: string | null) => void, 
   setCompileError: (error: string | null) => void,
   compileLatex: (code: string) => Promise<void>,
-  saveToUndoStack: () => void  // ⭐ ADD THIS PARAMETER
+  saveToUndoStack: () => void
 ) {
-  const [state, setState] = useState<MorphEditorState>({
+  // ⭐ CHANGE: Store proposals per message ID
+  const [state, setState] = useState<{
+    isProcessing: boolean;
+    proposedChangesByMessage: Record<string, ProposedChange[]>;
+    chatMessages: ChatMessage[];
+    currentLatex: string;
+  }>({
     isProcessing: false,
-    proposedChanges: [],
+    proposedChangesByMessage: {},
     chatMessages: [
       {
         id: '1',
@@ -27,7 +33,6 @@ export function useMorphEditor(
         timestamp: new Date()
       }
     ],
-    hasActiveProposal: false,
     currentLatex: latexCode
   });
 
@@ -134,8 +139,11 @@ export function useMorphEditor(
             if (partialObject.changes && partialObject.changes.length > 0) {
               setState(prev => ({
                 ...prev,
-                proposedChanges: partialObject.changes,
-                hasActiveProposal: true
+                // ⭐ Store by message ID
+                proposedChangesByMessage: {
+                  ...prev.proposedChangesByMessage,
+                  [assistantMessageId]: partialObject.changes
+                }
               }));
             }
             
@@ -156,8 +164,11 @@ export function useMorphEditor(
       if (latestPartial.message && latestPartial.changes) {
         setState(prev => ({
           ...prev,
-          proposedChanges: latestPartial.changes || [],
-          hasActiveProposal: true,
+          // ⭐ Store by message ID
+          proposedChangesByMessage: {
+            ...prev.proposedChangesByMessage,
+            [assistantMessageId]: latestPartial.changes || []
+          },
           chatMessages: prev.chatMessages.map(msg => 
             msg.id === assistantMessageId 
               ? { ...msg, content: latestPartial.message || '' }
@@ -186,12 +197,23 @@ export function useMorphEditor(
   }, [latexCode]);
 
   const applyChange = useCallback(async (changeId: string) => {
-    const change = state.proposedChanges.find(c => c.id === changeId);
-    if (!change) return;
+    // ⭐ Find the change across all messages
+    let change: ProposedChange | undefined;
+    let messageId: string | undefined;
+    
+    for (const [msgId, changes] of Object.entries(state.proposedChangesByMessage)) {
+      const found = changes.find(c => c.id === changeId);
+      if (found) {
+        change = found;
+        messageId = msgId;
+        break;
+      }
+    }
+    
+    if (!change || !messageId) return;
     
     setApplyingChangeId(changeId);
     try {
-      // ⭐ CALL THE PARENT'S SAVE FUNCTION
       saveToUndoStack();
       
       const morphRequest: MorphApplyRequest = {
@@ -213,13 +235,15 @@ export function useMorphEditor(
       setLatexCode(result.mergedCode);
       setCompileError(null);
       
-      // ⭐ MARK AS APPLIED instead of removing
+      // ⭐ MARK AS APPLIED in the specific message
       setState(prev => ({
         ...prev,
-        proposedChanges: prev.proposedChanges.map(c => 
-          c.id === changeId ? { ...c, isApplied: true } : c
-        ),
-        hasActiveProposal: prev.proposedChanges.some(c => c.id !== changeId && !c.isApplied)
+        proposedChangesByMessage: {
+          ...prev.proposedChangesByMessage,
+          [messageId!]: prev.proposedChangesByMessage[messageId!].map(c => 
+            c.id === changeId ? { ...c, isApplied: true } : c
+          )
+        }
       }));
 
       setApplyingChangeId(null);
@@ -231,31 +255,41 @@ export function useMorphEditor(
       setCompileError(`Failed to apply change: ${change.description}`);
       setApplyingChangeId(null);
     }
-  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
+  }, [state.proposedChangesByMessage, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
 
   const rejectChange = useCallback((changeId: string) => {
-    setState(prev => ({
-      ...prev,
-      // ⭐ MARK AS REJECTED instead of removing
-      proposedChanges: prev.proposedChanges.map(c => 
-        c.id === changeId ? { ...c, isRejected: true } : c
-      ),
-      hasActiveProposal: prev.proposedChanges.some(c => !c.isApplied && !c.isRejected)
-    }));
+    setState(prev => {
+      const newProposals = { ...prev.proposedChangesByMessage };
+      
+      // Find and mark as rejected across all messages
+      for (const msgId in newProposals) {
+        newProposals[msgId] = newProposals[msgId].map(c =>
+          c.id === changeId ? { ...c, isRejected: true } : c
+        );
+      }
+      
+      return {
+        ...prev,
+        proposedChangesByMessage: newProposals
+      };
+    });
   }, []);
 
-  const applyAllChanges = useCallback(async () => {
+  const applyAllChanges = useCallback(async (messageId: string) => {
     setIsApplyingAll(true);
-    if (state.proposedChanges.length === 0) return;
+    const changes = state.proposedChangesByMessage[messageId] || [];
+    
+    if (changes.length === 0) {
+      setIsApplyingAll(false);
+      return;
+    }
 
     try {
-      // ⭐ CALL THE PARENT'S SAVE FUNCTION
       saveToUndoStack();
       
       let currentCode = latexCode;
       
-      // ⭐ Only apply non-applied changes
-      const changesToApply = state.proposedChanges.filter(c => !c.isApplied);
+      const changesToApply = changes.filter(c => !c.isApplied && !c.isRejected);
       
       for (const change of changesToApply) {
         const morphRequest: MorphApplyRequest = {
@@ -279,11 +313,13 @@ export function useMorphEditor(
       setLatexCode(currentCode);
       setCompileError(null);
       
-      // ⭐ MARK ALL AS APPLIED
+      // ⭐ MARK ALL AS APPLIED for this message
       setState(prev => ({
         ...prev,
-        proposedChanges: prev.proposedChanges.map(c => ({ ...c, isApplied: true })),
-        hasActiveProposal: false
+        proposedChangesByMessage: {
+          ...prev.proposedChangesByMessage,
+          [messageId]: prev.proposedChangesByMessage[messageId].map(c => ({ ...c, isApplied: true }))
+        }
       }));
 
       setIsApplyingAll(false);
@@ -295,16 +331,17 @@ export function useMorphEditor(
       setCompileError('Failed to apply changes. Please try again.');
       setIsApplyingAll(false);
     }
-  }, [state.proposedChanges, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
+  }, [state.proposedChangesByMessage, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
 
-  const rejectAllChanges = useCallback(() => {
+  const rejectAllChanges = useCallback((messageId: string) => {
     setState(prev => ({
       ...prev,
-      // ⭐ MARK ALL non-applied as REJECTED
-      proposedChanges: prev.proposedChanges.map(c => 
-        c.isApplied ? c : { ...c, isRejected: true }
-      ),
-      hasActiveProposal: false
+      proposedChangesByMessage: {
+        ...prev.proposedChangesByMessage,
+        [messageId]: prev.proposedChangesByMessage[messageId].map(c => 
+          c.isApplied ? c : { ...c, isRejected: true }
+        )
+      }
     }));
   }, []);
 
@@ -315,9 +352,8 @@ export function useMorphEditor(
     isProcessing: state.isProcessing,
     applyingChangeId,
     isApplyingAll,
-    proposedChanges: state.proposedChanges,
+    proposedChangesByMessage: state.proposedChangesByMessage,  // ⭐ Return the map
     chatMessages: state.chatMessages,
-    hasActiveProposal: state.hasActiveProposal,
     
     handleAIEdit,
     applyChange,
