@@ -13,7 +13,7 @@ const LaTeXEditResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { currentLatex, userRequest } = body;
+    const { currentLatex, userRequest, chatHistory } = body;
 
     // Validate input
     if (!currentLatex || !userRequest) {
@@ -32,6 +32,15 @@ export async function POST(request: NextRequest) {
 
     console.log('[Backend] Starting streamObject...');
 
+    // Build chat history context (only summaries, no code)
+    let conversationContext = '';
+    if (chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0) {
+      conversationContext = '\n\nPrevious conversation:\n' + 
+        chatHistory.map((msg: { type: string; content: string }) => 
+          `${msg.type === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+        ).join('\n');
+    }
+
     // Call streamObject
     const result = streamObject({
       model: anthropic('claude-sonnet-4-20250514'),
@@ -42,6 +51,7 @@ Current LaTeX document:
 \`\`\`latex
 ${currentLatex}
 \`\`\`
+${conversationContext}
 
 User request: "${userRequest}"
 
@@ -54,6 +64,7 @@ Guidelines:
 - Make only the requested changes
 - Preserve existing content unless specifically asked to modify it
 - Use proper LaTeX formatting and environments
+- Consider the conversation context when interpreting requests
 
 Return the complete modified LaTeX document.`
     });

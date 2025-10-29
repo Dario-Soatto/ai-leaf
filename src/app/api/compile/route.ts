@@ -112,11 +112,17 @@ export async function POST(request: NextRequest) {
       signal: AbortSignal.timeout(60000) // 60 second timeout
     });
 
-    if (!texliveResponse.ok) {
+    // Check if we got a PDF or an error log
+    const contentType = texliveResponse.headers.get('Content-Type');
+    console.log('Response Content-Type:', contentType);
+
+    // If it's not a PDF, it's an error log
+    if (!contentType || !contentType.includes('application/pdf')) {
       let errorMessage = 'LaTeX compilation failed';
       try {
-        const errorData = await texliveResponse.text();
-        errorMessage = errorData || errorMessage;
+        const logText = await texliveResponse.text();
+        console.log('Compilation log:', logText);
+        errorMessage = logText || errorMessage;
       } catch (e) {
         // Use default error message
       }

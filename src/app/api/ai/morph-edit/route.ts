@@ -22,7 +22,7 @@ const MorphEditResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { currentLatex, userRequest } = body;
+    const { currentLatex, userRequest, chatHistory } = body;
 
     // Validate input
     if (!currentLatex || !userRequest) {
@@ -41,6 +41,15 @@ export async function POST(request: NextRequest) {
 
     console.log('[Backend Morph] Starting streamObject...');
 
+    // Build chat history context (only summaries, no code)
+    let conversationContext = '';
+    if (chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0) {
+      conversationContext = '\n\nPrevious conversation:\n' + 
+        chatHistory.map((msg: { type: string; content: string }) => 
+          `${msg.type === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+        ).join('\n');
+    }
+
     // Call streamObject
     const result = streamObject({
       model: anthropic('claude-sonnet-4-20250514'),
@@ -51,6 +60,7 @@ Current LaTeX document:
 \`\`\`latex
 ${currentLatex}
 \`\`\`
+${conversationContext}
 
 User request: "${userRequest}"
 
@@ -73,9 +83,12 @@ Guidelines:
 - Use // ... existing code ... to mark unchanged sections
 - Provide sufficient context around changes to avoid ambiguity
 - Make sure each change has a clear, specific purpose
+- Consider the conversation context when interpreting requests
 
 Return multiple individual changes that can be applied separately.`
     });
+
+    
 
     console.log('[Backend Morph] streamObject created, starting to iterate...');
 

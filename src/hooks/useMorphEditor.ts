@@ -44,7 +44,7 @@ export function useMorphEditor(
 
   const handleAIEdit = useCallback(async (userRequest: string) => {
     if (!userRequest.trim()) return;
-
+  
     setState(prev => ({ ...prev, isProcessing: true }));
     
     const userMessage: ChatMessage = {
@@ -58,18 +58,27 @@ export function useMorphEditor(
       ...prev,
       chatMessages: [...prev.chatMessages, userMessage]
     }));
-
+  
     try {
       console.log('[Frontend Morph] Starting fetch to /api/ai/morph-edit');
+      
+      // Prepare chat history (only user messages and AI summaries, no code)
+      const chatHistoryForContext = state.chatMessages.map(msg => ({
+        type: msg.type,
+        content: msg.content  // This is just the summary/message, not the code
+      }));
       
       const response = await fetch('/api/ai/morph-edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           currentLatex: latexCode, 
-          userRequest 
+          userRequest,
+          chatHistory: chatHistoryForContext  // Add chat history
         } as MorphEditRequest),
       });
+  
+      
 
       console.log('[Frontend Morph] Response received:', {
         ok: response.ok,
@@ -194,7 +203,7 @@ export function useMorphEditor(
       setState(prev => ({ ...prev, isProcessing: false }));
       console.log('[Frontend Morph] Processing complete');
     }
-  }, [latexCode]);
+  }, [latexCode, state.chatMessages]);
 
   const applyChange = useCallback(async (changeId: string) => {
     // ⭐ Find the change across all messages

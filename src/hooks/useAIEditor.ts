@@ -39,7 +39,7 @@ export function useAIEditor(
 
   const handleAIEdit = useCallback(async (userRequest: string) => {
     if (!userRequest.trim()) return;
-
+  
     setIsAIProcessing(true);
     
     const userMessage: ChatMessage = {
@@ -48,16 +48,26 @@ export function useAIEditor(
       content: userRequest,
       timestamp: new Date()
     };
-
+  
     setChatMessages(prev => [...prev, userMessage]);
-
+  
     try {
       console.log('[Frontend] Starting fetch to /api/ai/edit');
+      
+      // Prepare chat history (only user messages and AI summaries, no code)
+      const chatHistoryForContext = chatMessages.map(msg => ({
+        type: msg.type,
+        content: msg.content  // This is just the summary/message, not the code
+      }));
       
       const response = await fetch('/api/ai/edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentLatex: latexCode, userRequest }),
+        body: JSON.stringify({ 
+          currentLatex: latexCode, 
+          userRequest,
+          chatHistory: chatHistoryForContext  // Add chat history
+        }),
       });
 
       console.log('[Frontend] Response received:', {
@@ -181,7 +191,7 @@ export function useAIEditor(
       setIsAIProcessing(false);
       console.log('[Frontend] Processing complete');
     }
-  }, [latexCode]);
+  }, [latexCode, chatMessages]);
 
   const acceptAIProposal = useCallback(async (messageId: string) => {
     const proposal = aiProposals[messageId];
