@@ -22,7 +22,7 @@ const MorphEditResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { currentLatex, userRequest, chatHistory } = body;
+    const { currentLatex, userRequest, chatHistory, availableImages } = body;
 
     // Validate input
     if (!currentLatex || !userRequest) {
@@ -50,6 +50,13 @@ export async function POST(request: NextRequest) {
         ).join('\n');
     }
 
+    let imagesContext = '';
+    if (availableImages && Array.isArray(availableImages) && availableImages.length > 0) {
+      imagesContext = '\n\nAvailable images:\n' + 
+        availableImages.map((img: string) => `- ${img}`).join('\n') +
+        '\n\nYou can reference these images using \\includegraphics{filename}';
+    }
+
     // Call streamObject
     const result = streamObject({
       model: anthropic('claude-sonnet-4-20250514'),
@@ -61,6 +68,7 @@ Current LaTeX document:
 ${currentLatex}
 \`\`\`
 ${conversationContext}
+${imagesContext}
 
 User request: "${userRequest}"
 
@@ -84,6 +92,8 @@ Guidelines:
 - Provide sufficient context around changes to avoid ambiguity
 - Make sure each change has a clear, specific purpose
 - Consider the conversation context when interpreting requests
+- When using images, only reference files from the available images list
+- Add \\usepackage{graphicx} if suggesting image usage and it's not already present
 
 Return multiple individual changes that can be applied separately.`
     });

@@ -22,7 +22,8 @@ export function useAIEditor(
   setPdfUrl: (url: string | null) => void, 
   setCompileError: (error: string | null) => void,
   compileLatex: (code: string) => Promise<void>,
-  saveToUndoStack: () => void  // ⭐ ADD THIS PARAMETER
+  saveToUndoStack: () => void,
+  availableImages?: string[]  // Add this parameter
 ) {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
@@ -59,6 +60,8 @@ export function useAIEditor(
         type: msg.type,
         content: msg.content  // This is just the summary/message, not the code
       }));
+
+      
       
       const response = await fetch('/api/ai/edit', {
         method: 'POST',
@@ -66,7 +69,8 @@ export function useAIEditor(
         body: JSON.stringify({ 
           currentLatex: latexCode, 
           userRequest,
-          chatHistory: chatHistoryForContext  // Add chat history
+          chatHistory: chatHistoryForContext,
+          availableImages: availableImages || []  // Add this
         }),
       });
 
@@ -191,7 +195,7 @@ export function useAIEditor(
       setIsAIProcessing(false);
       console.log('[Frontend] Processing complete');
     }
-  }, [latexCode, chatMessages]);
+  }, [latexCode, chatMessages, availableImages]);
 
   const acceptAIProposal = useCallback(async (messageId: string) => {
     const proposal = aiProposals[messageId];

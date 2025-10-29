@@ -13,7 +13,7 @@ const LaTeXEditResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { currentLatex, userRequest, chatHistory } = body;
+    const { currentLatex, userRequest, chatHistory, availableImages } = body;
 
     // Validate input
     if (!currentLatex || !userRequest) {
@@ -41,6 +41,13 @@ export async function POST(request: NextRequest) {
         ).join('\n');
     }
 
+    let imagesContext = '';
+    if (availableImages && Array.isArray(availableImages) && availableImages.length > 0) {
+      imagesContext = '\n\nAvailable images:\n' + 
+        availableImages.map((img: string) => `- ${img}`).join('\n') +
+        '\n\nYou can reference these images using \\includegraphics{filename}';
+    }
+
     // Call streamObject
     const result = streamObject({
       model: anthropic('claude-sonnet-4-20250514'),
@@ -52,6 +59,7 @@ Current LaTeX document:
 ${currentLatex}
 \`\`\`
 ${conversationContext}
+${imagesContext}
 
 User request: "${userRequest}"
 
@@ -59,12 +67,13 @@ Please modify the LaTeX document according to the user's request. Return the com
 
 Guidelines:
 - Maintain proper LaTeX structure and syntax
-- Add necessary packages if required
+- Add necessary packages if required (e.g., \\usepackage{graphicx} for images)
 - Ensure the document compiles correctly
 - Make only the requested changes
 - Preserve existing content unless specifically asked to modify it
 - Use proper LaTeX formatting and environments
 - Consider the conversation context when interpreting requests
+- When using images, only reference files from the available images list
 
 Return the complete modified LaTeX document.`
     });

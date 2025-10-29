@@ -22,6 +22,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import ImageManager from './ImageManager';
+import { useImageManager } from '@/hooks/useImageManager';
 
 type EditingMode = 'complete' | 'morph';
 
@@ -57,6 +58,10 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showImageManager, setShowImageManager] = useState(false);
+  const { images } = useImageManager(document.id);
+  const availableImageFilenames = images.map(img => img.filename);
+  console.log('[LaTeXEditor] Available images:', availableImageFilenames);
+  
 
   // ⭐ ADD SHARED UNDO/REDO STATE
   const [undoStack, setUndoStack] = useState<string[]>([]);
@@ -83,7 +88,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     pdfCompiler.setPdfUrl, 
     pdfCompiler.setCompileError, 
     pdfCompiler.compileLatex,
-    saveToUndoStack
+    saveToUndoStack,
+    availableImageFilenames  // Add this parameter
   );
   const morphEditor = useMorphEditor(
     latexCode, 
@@ -91,7 +97,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     pdfCompiler.setPdfUrl, 
     pdfCompiler.setCompileError, 
     pdfCompiler.compileLatex,
-    saveToUndoStack
+    saveToUndoStack,
+    availableImageFilenames  // Add this parameter
   );
 
   // Auto-compile on mount

@@ -14,7 +14,8 @@ export function useMorphEditor(
   setPdfUrl: (url: string | null) => void, 
   setCompileError: (error: string | null) => void,
   compileLatex: (code: string) => Promise<void>,
-  saveToUndoStack: () => void
+  saveToUndoStack: () => void,
+  availableImages?: string[]  // Add this parameter
 ) {
   // ⭐ CHANGE: Store proposals per message ID
   const [state, setState] = useState<{
@@ -74,7 +75,8 @@ export function useMorphEditor(
         body: JSON.stringify({ 
           currentLatex: latexCode, 
           userRequest,
-          chatHistory: chatHistoryForContext  // Add chat history
+          chatHistory: chatHistoryForContext,
+          availableImages: availableImages || []  // Add this
         } as MorphEditRequest),
       });
   
@@ -203,7 +205,7 @@ export function useMorphEditor(
       setState(prev => ({ ...prev, isProcessing: false }));
       console.log('[Frontend Morph] Processing complete');
     }
-  }, [latexCode, state.chatMessages]);
+  }, [latexCode, state.chatMessages, availableImages]);
 
   const applyChange = useCallback(async (changeId: string) => {
     // ⭐ Find the change across all messages
@@ -230,6 +232,7 @@ export function useMorphEditor(
         originalCode: latexCode,
         codeEdit: change.codeEdit
       };
+      
 
       const response = await fetch('/api/morph/apply', {
         method: 'POST',
