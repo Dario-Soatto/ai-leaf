@@ -468,214 +468,381 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
           </AlertDescription>
         </Alert>
       )}
-      {showImageManager && (
-        <div className="border-b bg-background" style={{ height: '300px' }}>
-          <ImageManager documentId={document.id} />
-        </div>
-      )}
-      {/* Three Panel Layout */}
-      <div ref={panelResize.containerRef} className="flex-1 flex overflow-hidden">
-        {/* Left Panel - LaTeX Code Editor */}
-        <div 
-          className="border-r flex flex-col"
-          style={{ width: `${panelResize.leftPanelWidth}%` }}
-        >
-          <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
-            <h2 className="text-sm font-medium">
-              LaTeX Code {isViewingVersion && '(Read-Only)'}
-            </h2>
-          </div>
-          <div className="flex-1 min-h-0">
-            <MonacoLaTeXEditor
-              value={latexCode}
-              onChange={setLatexCode}
-              proposedChanges={[]}  // ⭐ Pass empty array since we show inline now
-              onApplyChange={morphEditor.applyChange}
-              onRejectChange={morphEditor.rejectChange}
-              readOnly={isViewingVersion}
-            />
-          </div>
-        </div>
 
-        {/* Left Resize Handle */}
-        <div
-          ref={panelResize.leftResizeRef}
-          className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors"
-          onMouseDown={(e) => panelResize.handleMouseDown(e, 'left')}
-        />
+      {/* Main Layout: Image Panel (left) + Three Panel Layout (right) */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Sidebar - Image Manager (collapsible) */}
+        {showImageManager && (
+          <>
+            <div className="border-r flex flex-col bg-background" style={{ width: '300px' }}>
+              <ImageManager documentId={document.id} />
+            </div>
+            {/* Divider between image panel and editor */}
+            <div className="w-1 bg-border" />
+          </>
+        )}
 
-        {/* Middle Panel - PDF Preview */}
-        <div 
-          className="border-r flex flex-col"
-          style={{ width: `${panelResize.middlePanelWidth}%` }}
-        >
-          <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
-            <h2 className="text-sm font-medium">PDF Preview</h2>
-            <Button
-              onClick={handleCompile}
-              disabled={pdfCompiler.isCompiling}
-              size="sm"
-            >
-              {pdfCompiler.isCompiling ? 'Compiling...' : 'Compile'}
-            </Button>
-          </div>
-          <div className="flex-1 overflow-hidden relative">
-            {panelResize.isResizing && (
-              <div className="absolute inset-0 z-50" />
-            )}
-            
-            {pdfCompiler.isCompiling && (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                  <p className="text-sm text-muted-foreground">Compiling LaTeX...</p>
-                </div>
-              </div>
-            )}
-
-            {pdfCompiler.compileError && (
-              <div className="p-4 h-full flex items-center justify-center">
-                <Alert variant="destructive" className="max-w-md">
-                  <AlertDescription>
-                    <h3 className="font-medium mb-2">Compilation Error</h3>
-                    <p className="text-sm">{pdfCompiler.compileError}</p>
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
-
-            {pdfCompiler.pdfUrl && !pdfCompiler.isCompiling && (
-              <iframe
-                src={pdfCompiler.pdfUrl}
-                className="w-full h-full border-0"
-                title="LaTeX PDF Preview"
+        {/* Three Panel Layout */}
+        <div ref={panelResize.containerRef} className="flex-1 flex overflow-hidden">
+          {/* Left Panel - LaTeX Code Editor */}
+          <div 
+            className="border-r flex flex-col"
+            style={{ width: `${panelResize.leftPanelWidth}%` }}
+          >
+            <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
+              <h2 className="text-sm font-medium">
+                LaTeX Code {isViewingVersion && '(Read-Only)'}
+              </h2>
+            </div>
+            <div className="flex-1 min-h-0">
+              <MonacoLaTeXEditor
+                value={latexCode}
+                onChange={setLatexCode}
+                proposedChanges={[]}
+                onApplyChange={morphEditor.applyChange}
+                onRejectChange={morphEditor.rejectChange}
+                readOnly={isViewingVersion}
               />
-            )}
-
-            {!pdfCompiler.pdfUrl && !pdfCompiler.isCompiling && !pdfCompiler.compileError && (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-sm text-muted-foreground">
-                  Click &quot;Compile&quot; to generate PDF preview
-                </p>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
 
-        {/* Right Resize Handle */}
-        <div
-          ref={panelResize.rightResizeRef}
-          className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors"
-          onMouseDown={(e) => panelResize.handleMouseDown(e, 'right')}
-        />
+          {/* Left Resize Handle */}
+          <div
+            ref={panelResize.leftResizeRef}
+            className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors"
+            onMouseDown={(e) => panelResize.handleMouseDown(e, 'left')}
+          />
 
-        {/* Right Panel - AI Chat */}
-        <div 
-          className="flex flex-col overflow-hidden"
-          style={{ width: `${panelResize.rightPanelWidth}%` }}
-        >
-          <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
-            <h2 className="text-sm font-medium">
-              AI Assistant ({editingMode === 'complete' ? 'Complete Rewrite' : 'Morph Diff'})
-            </h2>
+          {/* Middle Panel - PDF Preview */}
+          <div 
+            className="border-r flex flex-col"
+            style={{ width: `${panelResize.middlePanelWidth}%` }}
+          >
+            <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
+              <h2 className="text-sm font-medium">PDF Preview</h2>
+              <Button
+                onClick={handleCompile}
+                disabled={pdfCompiler.isCompiling}
+                size="sm"
+              >
+                {pdfCompiler.isCompiling ? 'Compiling...' : 'Compile'}
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden relative">
+              {panelResize.isResizing && (
+                <div className="absolute inset-0 z-50" />
+              )}
+              
+              {pdfCompiler.isCompiling && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-sm text-muted-foreground">Compiling LaTeX...</p>
+                  </div>
+                </div>
+              )}
+
+              {pdfCompiler.compileError && (
+                <div className="p-4 h-full flex items-center justify-center">
+                  <Alert variant="destructive" className="max-w-md">
+                    <AlertDescription>
+                      <h3 className="font-medium mb-2">Compilation Error</h3>
+                      <p className="text-sm">{pdfCompiler.compileError}</p>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
+              {pdfCompiler.pdfUrl && !pdfCompiler.isCompiling && (
+                <iframe
+                  src={pdfCompiler.pdfUrl}
+                  className="w-full h-full border-0"
+                  title="LaTeX PDF Preview"
+                />
+              )}
+
+              {!pdfCompiler.pdfUrl && !pdfCompiler.isCompiling && !pdfCompiler.compileError && (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-sm text-muted-foreground">
+                    Click &quot;Compile&quot; to generate PDF preview
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-          
-          {/* Chat Panel Content */}
-          {editingMode === 'complete' ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Chat Messages */}
-              <div className="flex-1 p-4 overflow-auto">
-                <div className="space-y-3">
-                  {aiEditor.chatMessages.map((message, index) => (
-                    <div key={message.id}>
-                      {message.type === 'user' ? (
-                        <div className="p-3 rounded-lg bg-primary text-primary-foreground ml-8">
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {message.timestamp.toLocaleTimeString()}
-                          </p>
-                        </div>
-                      ) : (
-                        <div>
-                          {/* Show loading indicator at the top if processing */}
-                          {(() => {
-                            const isLastMessage = index === aiEditor.chatMessages.length - 1;
-                            const showLoading = aiEditor.isAIProcessing && isLastMessage;
-                            
-                            return (
-                              <>
-                                {showLoading && (
-                                  <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                                    <span className="font-medium">Generating...</span>
-                                  </div>
-                                )}
-                                
-                                {/* ⭐ JUST SHOW THE MESSAGE - NO LATEX CODE PARSING */}
-                                <p className="text-sm whitespace-pre-wrap mb-3">{message.content}</p>
-                                
-                                {/* ⭐ SHOW PROPOSAL for this message */}
-                                {aiEditor.aiProposals[message.id] && (
-                                  <div className={`border rounded-lg p-3 mt-3 ${
-                                    aiEditor.aiProposals[message.id].isApplied 
-                                      ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
-                                      : aiEditor.aiProposals[message.id].isRejected
-                                      ? 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20'
-                                      : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
-                                  }`}>
-                                    {/* Description and Confidence */}
-                                    <div className="mb-2">
-                                      <h4 className={`text-sm font-medium mb-1 ${
-                                        aiEditor.aiProposals[message.id].isApplied
-                                          ? 'text-green-800 dark:text-green-200'
-                                          : aiEditor.aiProposals[message.id].isRejected
-                                          ? 'text-gray-600 dark:text-gray-400'
-                                          : 'text-blue-800 dark:text-blue-200'
-                                      }`}>
-                                        {aiEditor.aiProposals[message.id].isApplied 
-                                          ? '✓ Applied Complete Rewrite' 
-                                          : aiEditor.aiProposals[message.id].isRejected
-                                          ? '✗ Rejected Complete Rewrite'
-                                          : 'Proposed Complete Rewrite'}
-                                      </h4>
-                                      {aiEditor.aiProposals[message.id].confidence !== undefined && aiEditor.aiProposals[message.id].confidence > 0 && (
-                                        <div className={`text-xs ${
+
+          {/* Right Resize Handle */}
+          <div
+            ref={panelResize.rightResizeRef}
+            className="w-1 bg-border hover:bg-primary/50 cursor-col-resize transition-colors"
+            onMouseDown={(e) => panelResize.handleMouseDown(e, 'right')}
+          />
+
+          {/* Right Panel - AI Chat */}
+          <div 
+            className="flex flex-col overflow-hidden"
+            style={{ width: `${panelResize.rightPanelWidth}%` }}
+          >
+            <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
+              <h2 className="text-sm font-medium">
+                AI Assistant ({editingMode === 'complete' ? 'Complete Rewrite' : 'Morph Diff'})
+              </h2>
+            </div>
+            
+            {/* Chat Panel Content */}
+            {editingMode === 'complete' ? (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Chat Messages */}
+                <div className="flex-1 p-4 overflow-auto">
+                  <div className="space-y-3">
+                    {aiEditor.chatMessages.map((message, index) => (
+                      <div key={message.id}>
+                        {message.type === 'user' ? (
+                          <div className="p-3 rounded-lg bg-primary text-primary-foreground ml-8">
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            <p className="text-xs opacity-70 mt-1">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
+                        ) : (
+                          <div>
+                            {/* Show loading indicator at the top if processing */}
+                            {(() => {
+                              const isLastMessage = index === aiEditor.chatMessages.length - 1;
+                              const showLoading = aiEditor.isAIProcessing && isLastMessage;
+                              
+                              return (
+                                <>
+                                  {showLoading && (
+                                    <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                      <span className="font-medium">Generating...</span>
+                                    </div>
+                                  )}
+                                  
+                                  {/* ⭐ JUST SHOW THE MESSAGE - NO LATEX CODE PARSING */}
+                                  <p className="text-sm whitespace-pre-wrap mb-3">{message.content}</p>
+                                  
+                                  {/* ⭐ SHOW PROPOSAL for this message */}
+                                  {aiEditor.aiProposals[message.id] && (
+                                    <div className={`border rounded-lg p-3 mt-3 ${
+                                      aiEditor.aiProposals[message.id].isApplied 
+                                        ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
+                                        : aiEditor.aiProposals[message.id].isRejected
+                                        ? 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20'
+                                        : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                                    }`}>
+                                      {/* Description and Confidence */}
+                                      <div className="mb-2">
+                                        <h4 className={`text-sm font-medium mb-1 ${
                                           aiEditor.aiProposals[message.id].isApplied
-                                            ? 'text-green-600 dark:text-green-400'
+                                            ? 'text-green-800 dark:text-green-200'
                                             : aiEditor.aiProposals[message.id].isRejected
-                                            ? 'text-gray-500 dark:text-gray-500'
-                                            : 'text-blue-600 dark:text-blue-400'
+                                            ? 'text-gray-600 dark:text-gray-400'
+                                            : 'text-blue-800 dark:text-blue-200'
                                         }`}>
-                                          Confidence: {Math.round(aiEditor.aiProposals[message.id].confidence * 100)}%
+                                          {aiEditor.aiProposals[message.id].isApplied 
+                                            ? '✓ Applied Complete Rewrite' 
+                                            : aiEditor.aiProposals[message.id].isRejected
+                                            ? '✗ Rejected Complete Rewrite'
+                                            : 'Proposed Complete Rewrite'}
+                                        </h4>
+                                        {aiEditor.aiProposals[message.id].confidence !== undefined && aiEditor.aiProposals[message.id].confidence > 0 && (
+                                          <div className={`text-xs ${
+                                            aiEditor.aiProposals[message.id].isApplied
+                                              ? 'text-green-600 dark:text-green-400'
+                                              : aiEditor.aiProposals[message.id].isRejected
+                                              ? 'text-gray-500 dark:text-gray-500'
+                                              : 'text-blue-600 dark:text-blue-400'
+                                          }`}>
+                                            Confidence: {Math.round(aiEditor.aiProposals[message.id].confidence * 100)}%
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* LaTeX Code Preview - STREAMS HERE */}
+                                      {aiEditor.aiProposals[message.id].newLatexCode && (
+                                        <div className="mb-3">
+                                          <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                            {aiEditor.isAIProcessing ? 'Streaming preview...' : 'Preview:'}
+                                          </div>
+                                          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200 max-h-48 overflow-y-auto">
+                                            <pre className="whitespace-pre-wrap">{aiEditor.aiProposals[message.id].newLatexCode}</pre>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Action Buttons - only when streaming is done AND not applied/rejected */}
+                                      {!aiEditor.isAIProcessing && !aiEditor.aiProposals[message.id].isApplied && !aiEditor.aiProposals[message.id].isRejected && (
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => aiEditor.acceptAIProposal(message.id)}
+                                            disabled={aiEditor.isApplying}
+                                            className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
+                                          >
+                                            {aiEditor.isApplying ? 'Applying...' : 'Apply'}
+                                          </button>
+                                          <button
+                                            onClick={() => aiEditor.rejectAIProposal(message.id)}
+                                            disabled={aiEditor.isApplying}
+                                            className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
+                                          >
+                                            Reject
+                                          </button>
                                         </div>
                                       )}
                                     </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                            <p className="text-xs opacity-70 mt-1">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Show loading indicator after all messages if processing and no assistant message yet */}
+                    {aiEditor.isAIProcessing && 
+                     (aiEditor.chatMessages.length === 0 || 
+                      aiEditor.chatMessages[aiEditor.chatMessages.length - 1]?.type === 'user') && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <span className="font-medium">Generating...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Chat Input */}
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                  <form onSubmit={handleChatSubmit} className="relative">
+                    <textarea
+                      name="message"
+                      placeholder="Ask me to help with your LaTeX..."
+                      disabled={aiEditor.isAIProcessing}
+                      rows={3}
+                      className="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          e.currentTarget.form?.requestSubmit();
+                        }
+                      }}
+                    />
+                    <button 
+                      type="submit"
+                      disabled={aiEditor.isAIProcessing}
+                      className="absolute bottom-3 right-2.5 w-8 h-8 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                      title="Send message (Enter)"
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                        className="w-4 h-4"
+                      >
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                      </svg>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ) : (
+              /* Morph Mode */
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Chat Messages */}
+                <div className="flex-1 p-4 overflow-auto">
+                  <div className="space-y-3">
+                    {morphEditor.chatMessages.map((message, index) => (
+                      <div key={message.id}>
+                        {message.type === 'user' ? (
+                          <div className="p-3 rounded-lg bg-primary text-primary-foreground ml-8">
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            <p className="text-xs opacity-70 mt-1">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
+                        ) : (
+                          <div>
+                            {/* Show loading indicator at the top if processing */}
+                            {morphEditor.isProcessing && index === morphEditor.chatMessages.length - 1 && (
+                              <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                <span className="font-medium">Generating...</span>
+                              </div>
+                            )}
+                            
+                            <p className="text-sm whitespace-pre-wrap mb-3">{message.content}</p>
+                            
+                            {/* ⭐ Show proposed changes for ANY message that has them */}
+                            {morphEditor.proposedChangesByMessage[message.id] && 
+                             morphEditor.proposedChangesByMessage[message.id].length > 0 && (
+                              <div className="space-y-3 mt-3">
+                                {morphEditor.proposedChangesByMessage[message.id].map((change) => (
+                                  <div key={change.id} className={`border rounded-lg p-3 ${
+                                    change.isApplied
+                                      ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
+                                      : change.isRejected
+                                      ? 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20'
+                                      : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
+                                  }`}>
+                                    {/* Change Description */}
+                                    {change.description && (
+                                      <div className="mb-2">
+                                        <h4 className={`text-sm font-medium mb-1 ${
+                                          change.isApplied
+                                            ? 'text-green-800 dark:text-green-200'
+                                            : change.isRejected
+                                            ? 'text-gray-600 dark:text-gray-400'
+                                            : 'text-blue-800 dark:text-blue-200'
+                                        }`}>
+                                          {change.isApplied ? '✓ ' : change.isRejected ? '✗ ' : ''}{change.description}
+                                        </h4>
+                                        {change.confidence !== undefined && (
+                                          <div className={`text-xs ${
+                                            change.isApplied
+                                              ? 'text-green-600 dark:text-green-400'
+                                              : change.isRejected
+                                              ? 'text-gray-500 dark:text-gray-500'
+                                              : 'text-blue-600 dark:text-blue-400'
+                                          }`}>
+                                            Confidence: {Math.round(change.confidence * 100)}%
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
 
-                                    {/* LaTeX Code Preview - STREAMS HERE */}
-                                    {aiEditor.aiProposals[message.id].newLatexCode && (
+                                    {/* Code Preview */}
+                                    {change.codeEdit && (
                                       <div className="mb-3">
-                                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                          {aiEditor.isAIProcessing ? 'Streaming preview...' : 'Preview:'}
-                                        </div>
-                                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200 max-h-48 overflow-y-auto">
-                                          <pre className="whitespace-pre-wrap">{aiEditor.aiProposals[message.id].newLatexCode}</pre>
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Preview:</div>
+                                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200">
+                                          <pre className="whitespace-pre-wrap">{change.codeEdit}</pre>
                                         </div>
                                       </div>
                                     )}
 
-                                    {/* Action Buttons - only when streaming is done AND not applied/rejected */}
-                                    {!aiEditor.isAIProcessing && !aiEditor.aiProposals[message.id].isApplied && !aiEditor.aiProposals[message.id].isRejected && (
+                                    {/* Action Buttons - only show when streaming is done AND not applied/rejected */}
+                                    {!morphEditor.isProcessing && !change.isApplied && !change.isRejected && change.description && change.codeEdit && (
                                       <div className="flex gap-2">
                                         <button
-                                          onClick={() => aiEditor.acceptAIProposal(message.id)}
-                                          disabled={aiEditor.isApplying}
+                                          onClick={() => morphEditor.applyChange(change.id)}
+                                          disabled={morphEditor.applyingChangeId === change.id || (morphEditor.applyingChangeId !== null && morphEditor.applyingChangeId !== change.id)}
                                           className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
                                         >
-                                          {aiEditor.isApplying ? 'Applying...' : 'Apply'}
+                                          {morphEditor.applyingChangeId === change.id ? 'Applying...' : 'Apply'}
                                         </button>
                                         <button
-                                          onClick={() => aiEditor.rejectAIProposal(message.id)}
-                                          disabled={aiEditor.isApplying}
+                                          onClick={() => morphEditor.rejectChange(change.id)}
+                                          disabled={morphEditor.applyingChangeId !== null}
                                           className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
                                         >
                                           Reject
@@ -683,248 +850,91 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                                       </div>
                                     )}
                                   </div>
+                                ))}
+                                
+                                {/* Apply All / Reject All buttons - only show for pending changes */}
+                                {!morphEditor.isProcessing && morphEditor.proposedChangesByMessage[message.id].filter(c => !c.isApplied && !c.isRejected).length > 1 && (
+                                  <div className="flex gap-2 pt-2">
+                                    <button
+                                      onClick={() => morphEditor.applyAllChanges(message.id)}
+                                      disabled={morphEditor.isApplyingAll || morphEditor.applyingChangeId !== null}
+                                      className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors font-medium"
+                                    >
+                                      {morphEditor.isApplyingAll ? 'Applying All...' : 'Apply All'}
+                                    </button>
+                                    <button
+                                      onClick={() => morphEditor.rejectAllChanges(message.id)}
+                                      disabled={morphEditor.isApplyingAll || morphEditor.applyingChangeId !== null}
+                                      className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors font-medium"
+                                    >
+                                      Reject All
+                                    </button>
+                                  </div>
                                 )}
-                              </>
-                            );
-                          })()}
-                          <p className="text-xs opacity-70 mt-1">
-                            {message.timestamp.toLocaleTimeString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {/* Show loading indicator after all messages if processing and no assistant message yet */}
-                  {aiEditor.isAIProcessing && 
-                   (aiEditor.chatMessages.length === 0 || 
-                    aiEditor.chatMessages[aiEditor.chatMessages.length - 1]?.type === 'user') && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                      <span className="font-medium">Generating...</span>
-                    </div>
-                  )}
+                              </div>
+                            )}
+                            
+                            <p className="text-xs opacity-70 mt-1">
+                              {message.timestamp.toLocaleTimeString()}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Show loading indicator after all messages if processing and no assistant message yet */}
+                    {morphEditor.isProcessing && 
+                     (morphEditor.chatMessages.length === 0 || 
+                      morphEditor.chatMessages[morphEditor.chatMessages.length - 1]?.type === 'user') && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <span className="font-medium">Generating...</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Chat Input */}
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                  <form onSubmit={handleChatSubmit} className="relative">
+                    <textarea
+                      name="message"
+                      placeholder="Ask me to help with your LaTeX..."
+                      disabled={morphEditor.isProcessing}
+                      rows={3}
+                      className="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          e.currentTarget.form?.requestSubmit();
+                        }
+                      }}
+                    />
+                    <button 
+                      type="submit"
+                      disabled={morphEditor.isProcessing}
+                      className="absolute bottom-3 right-2.5 w-8 h-8 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                      title="Send message (Enter)"
+                    >
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                        className="w-4 h-4"
+                      >
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                      </svg>
+                    </button>
+                  </form>
                 </div>
               </div>
-              
-              {/* Chat Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <form onSubmit={handleChatSubmit} className="relative">
-                  <textarea
-                    name="message"
-                    placeholder="Ask me to help with your LaTeX..."
-                    disabled={aiEditor.isAIProcessing}
-                    rows={3}
-                    className="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        e.currentTarget.form?.requestSubmit();
-                      }
-                    }}
-                  />
-                  <button 
-                    type="submit"
-                    disabled={aiEditor.isAIProcessing}
-                    className="absolute bottom-3 right-2.5 w-8 h-8 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                    title="Send message (Enter)"
-                  >
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      viewBox="0 0 24 24" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="2" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                      className="w-4 h-4"
-                    >
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                  </button>
-                </form>
-              </div>
-            </div>
-          ) : (
-            /* Morph Mode */
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Chat Messages */}
-              <div className="flex-1 p-4 overflow-auto">
-                <div className="space-y-3">
-                  {morphEditor.chatMessages.map((message, index) => (
-                    <div key={message.id}>
-                      {message.type === 'user' ? (
-                        <div className="p-3 rounded-lg bg-primary text-primary-foreground ml-8">
-                          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {message.timestamp.toLocaleTimeString()}
-                          </p>
-                        </div>
-                      ) : (
-                        <div>
-                          {/* Show loading indicator at the top if processing */}
-                          {morphEditor.isProcessing && index === morphEditor.chatMessages.length - 1 && (
-                            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                              <span className="font-medium">Generating...</span>
-                            </div>
-                          )}
-                          
-                          <p className="text-sm whitespace-pre-wrap mb-3">{message.content}</p>
-                          
-                          {/* ⭐ Show proposed changes for ANY message that has them */}
-                          {morphEditor.proposedChangesByMessage[message.id] && 
-                           morphEditor.proposedChangesByMessage[message.id].length > 0 && (
-                            <div className="space-y-3 mt-3">
-                              {morphEditor.proposedChangesByMessage[message.id].map((change) => (
-                                <div key={change.id} className={`border rounded-lg p-3 ${
-                                  change.isApplied
-                                    ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
-                                    : change.isRejected
-                                    ? 'border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/20'
-                                    : 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
-                                }`}>
-                                  {/* Change Description */}
-                                  {change.description && (
-                                    <div className="mb-2">
-                                      <h4 className={`text-sm font-medium mb-1 ${
-                                        change.isApplied
-                                          ? 'text-green-800 dark:text-green-200'
-                                          : change.isRejected
-                                          ? 'text-gray-600 dark:text-gray-400'
-                                          : 'text-blue-800 dark:text-blue-200'
-                                      }`}>
-                                        {change.isApplied ? '✓ ' : change.isRejected ? '✗ ' : ''}{change.description}
-                                      </h4>
-                                      {change.confidence !== undefined && (
-                                        <div className={`text-xs ${
-                                          change.isApplied
-                                            ? 'text-green-600 dark:text-green-400'
-                                            : change.isRejected
-                                            ? 'text-gray-500 dark:text-gray-500'
-                                            : 'text-blue-600 dark:text-blue-400'
-                                        }`}>
-                                          Confidence: {Math.round(change.confidence * 100)}%
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Code Preview */}
-                                  {change.codeEdit && (
-                                    <div className="mb-3">
-                                      <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Preview:</div>
-                                      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-2 text-xs font-mono text-gray-800 dark:text-gray-200">
-                                        <pre className="whitespace-pre-wrap">{change.codeEdit}</pre>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Action Buttons - only show when streaming is done AND not applied/rejected */}
-                                  {!morphEditor.isProcessing && !change.isApplied && !change.isRejected && change.description && change.codeEdit && (
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => morphEditor.applyChange(change.id)}
-                                        disabled={morphEditor.applyingChangeId === change.id || (morphEditor.applyingChangeId !== null && morphEditor.applyingChangeId !== change.id)}
-                                        className="px-3 py-1 bg-green-600 text-white text-xs rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        {morphEditor.applyingChangeId === change.id ? 'Applying...' : 'Apply'}
-                                      </button>
-                                      <button
-                                        onClick={() => morphEditor.rejectChange(change.id)}
-                                        disabled={morphEditor.applyingChangeId !== null}
-                                        className="px-3 py-1 bg-red-600 text-white text-xs rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        Reject
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                              
-                              {/* Apply All / Reject All buttons - only show for pending changes */}
-                              {!morphEditor.isProcessing && morphEditor.proposedChangesByMessage[message.id].filter(c => !c.isApplied && !c.isRejected).length > 1 && (
-                                <div className="flex gap-2 pt-2">
-                                  <button
-                                    onClick={() => morphEditor.applyAllChanges(message.id)}
-                                    disabled={morphEditor.isApplyingAll || morphEditor.applyingChangeId !== null}
-                                    className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed transition-colors font-medium"
-                                  >
-                                    {morphEditor.isApplyingAll ? 'Applying All...' : 'Apply All'}
-                                  </button>
-                                  <button
-                                    onClick={() => morphEditor.rejectAllChanges(message.id)}
-                                    disabled={morphEditor.isApplyingAll || morphEditor.applyingChangeId !== null}
-                                    className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed transition-colors font-medium"
-                                  >
-                                    Reject All
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          <p className="text-xs opacity-70 mt-1">
-                            {message.timestamp.toLocaleTimeString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {/* Show loading indicator after all messages if processing and no assistant message yet */}
-                  {morphEditor.isProcessing && 
-                   (morphEditor.chatMessages.length === 0 || 
-                    morphEditor.chatMessages[morphEditor.chatMessages.length - 1]?.type === 'user') && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                      <span className="font-medium">Generating...</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Chat Input */}
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <form onSubmit={handleChatSubmit} className="relative">
-                  <textarea
-                    name="message"
-                    placeholder="Ask me to help with your LaTeX..."
-                    disabled={morphEditor.isProcessing}
-                    rows={3}
-                    className="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        e.currentTarget.form?.requestSubmit();
-                      }
-                    }}
-                  />
-                  <button 
-                    type="submit"
-                    disabled={morphEditor.isProcessing}
-                    className="absolute bottom-3 right-2.5 w-8 h-8 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-                    title="Send message (Enter)"
-                  >
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      viewBox="0 0 24 24" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="2" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                      className="w-4 h-4"
-                    >
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
