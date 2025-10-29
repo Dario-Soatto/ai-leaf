@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Use service role key for server-side operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // ⭐ Service role key, not anon key
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
     auth: {
       autoRefreshToken: false,
@@ -13,10 +12,23 @@ const supabase = createClient(
   }
 );
 
+// Helper function to extract image filenames from LaTeX code
+function extractImageFilenames(latexCode: string): string[] {
+  const imageRegex = /\\includegraphics(?:\[.*?\])?\{([^}]+)\}/g;
+  const filenames: string[] = [];
+  let match;
+
+  while ((match = imageRegex.exec(latexCode)) !== null) {
+    filenames.push(match[1]);
+  }
+
+  return filenames;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { latex } = body;
+    const { latex, documentId } = body;
 
     if (!latex || typeof latex !== 'string') {
       return NextResponse.json(
@@ -25,53 +37,85 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate a unique filename
-    const filename = `temp-latex-${Date.now()}-${Math.random().toString(36).substring(7)}.tex`;
-    const filePath = `temp/${filename}`;
+    // Extract image filenames from LaTeX
+    const imageFilenames = extractImageFilenames(latex);
+    console.log('Found image references:', imageFilenames);
 
-    // Step 1: Upload LaTeX content to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('latex-files')
-      .upload(filePath, latex, {
-        contentType: 'text/plain',
-        cacheControl: '0',
-        upsert: false
-      });
+    // Create form data for texlive.net
+    const formData = new FormData();
+    
+    // Required: engine parameter
+    formData.append('engine', 'pdflatex');
+    
+    // Required: return parameter (pdf to get the PDF directly)
+    formData.append('return', 'pdf');
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return NextResponse.json(
-        { error: `Failed to upload LaTeX file: ${uploadError.message}` },
-        { status: 500 }
-      );
+    // Add the main LaTeX file
+    formData.append('filename[]', 'document.tex');
+    formData.append('filecontents[]', latex);
+
+    // Fetch and add images if there are any
+    if (imageFilenames.length > 0 && documentId) {
+      console.log('Fetching images from Supabase...');
+
+      const { data: images, error: dbError } = await supabase
+        .from('images')
+        .select('*')
+        .eq('document_id', documentId);
+
+      if (dbError) {
+        console.error('Error fetching images:', dbError);
+        return NextResponse.json(
+          { error: 'Failed to fetch document images' },
+          { status: 500 }
+        );
+      }
+
+      // Create a map of filename -> image data
+      const imageMap = new Map(images?.map(img => [img.filename, img]) || []);
+
+      // Download and add each referenced image
+      for (const filename of imageFilenames) {
+        const imageRecord = imageMap.get(filename);
+        
+        if (imageRecord) {
+          console.log(`Downloading image: ${filename}`);
+          
+          // Download image from Supabase Storage
+          const { data: imageData, error: downloadError } = await supabase.storage
+            .from('document-images')
+            .download(imageRecord.storage_path);
+
+          if (downloadError) {
+            console.error(`Error downloading ${filename}:`, downloadError);
+            continue; // Skip this image, let LaTeX show the error
+          }
+
+          // Add to form data
+          const blob = new Blob([await imageData.arrayBuffer()]);
+          formData.append('filename[]', filename);
+          formData.append('filecontents[]', blob);
+          
+          console.log(`Added image to submission: ${filename}`);
+        } else {
+          console.warn(`Image referenced but not found: ${filename}`);
+          // Continue anyway - LaTeX will show the error
+        }
+      }
     }
 
-    // Step 2: Get public URL for the file
-    const { data: urlData } = supabase.storage
-      .from('latex-files')
-      .getPublicUrl(filePath);
-
-    const publicUrl = urlData.publicUrl;
-
-    // Step 3: Call LaTeX Online with the URL
-    const latexOnlineUrl = `https://latexonline.cc/compile?url=${encodeURIComponent(publicUrl)}&command=pdflatex`;
-    
-    const latexOnlineResponse = await fetch(latexOnlineUrl, {
-      method: 'GET',
-      signal: AbortSignal.timeout(60000)
+    // Submit to texlive.net
+    console.log('Submitting to texlive.net...');
+    const texliveResponse = await fetch('https://texlive.net/cgi-bin/latexcgi', {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(60000) // 60 second timeout
     });
 
-    // Step 4: Delete the temporary file (don't wait for it)
-    supabase.storage
-      .from('latex-files')
-      .remove([filePath])
-      .catch(err => console.error('Failed to delete temp file:', err));
-
-    // Step 5: Check compilation result
-    if (!latexOnlineResponse.ok) {
+    if (!texliveResponse.ok) {
       let errorMessage = 'LaTeX compilation failed';
       try {
-        const errorData = await latexOnlineResponse.text();
+        const errorData = await texliveResponse.text();
         errorMessage = errorData || errorMessage;
       } catch (e) {
         // Use default error message
@@ -83,8 +127,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 6: Return the PDF
-    const pdfBuffer = await latexOnlineResponse.arrayBuffer();
+    // Get the PDF
+    const pdfBuffer = await texliveResponse.arrayBuffer();
 
     return new NextResponse(pdfBuffer, {
       status: 200,

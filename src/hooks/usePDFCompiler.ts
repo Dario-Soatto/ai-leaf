@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-export function usePDFCompiler() {
+export function usePDFCompiler(documentId?: string) {  // Add documentId parameter
   const [isCompiling, setIsCompiling] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
@@ -19,7 +19,10 @@ export function usePDFCompiler() {
       const response = await fetch('/api/compile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latex: latexCode }),
+        body: JSON.stringify({ 
+          latex: latexCode,
+          documentId: documentId  // Pass documentId
+        }),
       });
 
       if (!response.ok) {
@@ -37,7 +40,7 @@ export function usePDFCompiler() {
     } finally {
       setIsCompiling(false);
     }
-  }, []);
+  }, [documentId]);  // Add to dependencies
 
   const cleanupPdfUrl = useCallback(() => {
     if (pdfUrl) {

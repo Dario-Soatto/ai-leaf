@@ -21,6 +21,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import ImageManager from './ImageManager';
 
 type EditingMode = 'complete' | 'morph';
 
@@ -55,6 +56,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   const [title, setTitle] = useState(document.title);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showImageManager, setShowImageManager] = useState(false);
 
   // ⭐ ADD SHARED UNDO/REDO STATE
   const [undoStack, setUndoStack] = useState<string[]>([]);
@@ -70,7 +72,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   }, [latexCode]);
 
   // Use custom hooks
-  const pdfCompiler = usePDFCompiler();
+  const pdfCompiler = usePDFCompiler(document.id);
   const panelResize = usePanelResize();
   
   // ⭐ UPDATE THESE LINES TO ADD saveToUndoStack PARAMETER
@@ -317,6 +319,15 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               ← Back
             </Link>
           </Button>
+
+          <Button
+            onClick={() => setShowImageManager(!showImageManager)}
+            variant="outline"
+            size="sm"
+            title="Manage Images"
+          >
+            🖼️ Images
+          </Button>
           
           {/* Editable Title */}
           {isEditingTitle ? (
@@ -457,7 +468,11 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
           </AlertDescription>
         </Alert>
       )}
-
+      {showImageManager && (
+        <div className="border-b bg-background" style={{ height: '300px' }}>
+          <ImageManager documentId={document.id} />
+        </div>
+      )}
       {/* Three Panel Layout */}
       <div ref={panelResize.containerRef} className="flex-1 flex overflow-hidden">
         {/* Left Panel - LaTeX Code Editor */}
