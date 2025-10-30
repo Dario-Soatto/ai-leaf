@@ -50,9 +50,10 @@ export async function POST(request: NextRequest) {
     // Required: return parameter (pdf to get the PDF directly)
     formData.append('return', 'pdf');
 
-    // Add the main LaTeX file
+    // Add the main LaTeX file with nonstopmode
+    const latexWithNonstop = `\\nonstopmode\n${latex}`;
     formData.append('filename[]', 'document.tex');
-    formData.append('filecontents[]', latex);
+    formData.append('filecontents[]', latexWithNonstop);
 
     // Fetch and add images if there are any
     if (imageFilenames.length > 0 && documentId) {
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
           console.log(`Added image to submission: ${filename}`);
         } else {
           console.warn(`Image referenced but not found: ${filename}`);
-          // Continue anyway - LaTeX will show the error
+          // Don't add anything - LaTeX will show its default missing image placeholder
         }
       }
     }
@@ -112,31 +113,45 @@ export async function POST(request: NextRequest) {
       signal: AbortSignal.timeout(60000) // 60 second timeout
     });
 
-    // Check if we got a PDF or an error log
+    // Check response
     const contentType = texliveResponse.headers.get('Content-Type');
     console.log('Response Content-Type:', contentType);
+    console.log('Response status:', texliveResponse.status);
+    console.log('Response ok:', texliveResponse.ok);
 
-    // If it's not a PDF, it's an error log
+    // Get the response buffer
+    const buffer = await texliveResponse.arrayBuffer();
+    console.log('Response size:', buffer.byteLength, 'bytes');
+
+    // Check if it's a PDF or log text
     if (!contentType || !contentType.includes('application/pdf')) {
-      let errorMessage = 'LaTeX compilation failed';
-      try {
-        const logText = await texliveResponse.text();
-        console.log('Compilation log:', logText);
-        errorMessage = logText || errorMessage;
-      } catch (e) {
-        // Use default error message
+      const logText = new TextDecoder().decode(buffer);
+      console.log('Received text response, checking for PDF output...');
+      
+      // Check if PDF was actually generated (even with warnings/errors)
+      if (logText.includes('Output written on document.pdf')) {
+        // PDF was generated successfully despite warnings
+        // Unfortunately texlive.net returned the log instead of PDF
+        // This happens when exit code is non-zero
+        console.log('PDF was generated with warnings, but texlive.net returned log instead');
+        
+        // For missing images, we can still show success since the PDF exists
+        // Extract just the relevant error/warning portion
+        const warningMatch = logText.match(/LaTeX Warning:.*$/m);
+        const warningMessage = warningMatch ? warningMatch[0] : 'Compilation completed with warnings';
+        
+        return NextResponse.json({ 
+          error: `${warningMessage}\n\nNote: PDF was generated but contains placeholder boxes for missing images.`
+        }, { status: 500 }); // Still return 500 so frontend shows error, but with helpful message
       }
-
-      return NextResponse.json(
-        { error: errorMessage },
-        { status: 500 }
-      );
+      
+      // No PDF was generated - real error
+      console.log('Compilation failed, no PDF generated');
+      return NextResponse.json({ error: logText }, { status: 500 });
     }
 
-    // Get the PDF
-    const pdfBuffer = await texliveResponse.arrayBuffer();
-
-    return new NextResponse(pdfBuffer, {
+    // Return the PDF buffer
+    return new NextResponse(buffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
