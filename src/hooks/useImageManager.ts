@@ -106,6 +106,35 @@ export function useImageManager(documentId: string | null) {
     }
   }, []);
 
+  const renameImage = useCallback(async (imageId: string, newFilename: string) => {
+    setError(null);
+
+    try {
+      const response = await fetch('/api/images/rename', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageId, newFilename }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to rename image');
+      }
+
+      // Update local state
+      setImages(prev => prev.map(img => 
+        img.id === imageId ? { ...img, filename: newFilename } : img
+      ));
+
+      return data.image;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to rename image';
+      setError(errorMessage);
+      throw err;
+    }
+  }, []);
+
   // Load images on mount and when documentId changes
   useEffect(() => {
     fetchImages();
@@ -118,6 +147,7 @@ export function useImageManager(documentId: string | null) {
     error,
     uploadImage,
     deleteImage,
+    renameImage, // Add this
     refreshImages: fetchImages,
   };
 }

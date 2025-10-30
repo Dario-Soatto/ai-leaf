@@ -310,12 +310,13 @@ ${change.content || 'No content changes'}
           scrollBeyondLastLine: false,
           fontSize: 14,
           lineNumbers: 'on',
+          lineNumbersMinChars: 3, // Add this - reduces line number column width
           glyphMargin: true,
           folding: true,
           wordWrap: 'on',
           theme: 'vs-dark',
           automaticLayout: true,
-          padding: { top: 0, bottom: 0 },
+          padding: { top: 0, bottom: 0}, // Add left: 0, right: 0
           scrollbar: {
             vertical: 'auto',
             horizontal: 'auto',
@@ -325,7 +326,8 @@ ${change.content || 'No content changes'}
           hover: {
             enabled: true,
             delay: 300
-          }
+          },
+          lineDecorationsWidth: 10, // Add this - reduces decoration gutter width
         }}
       />
       

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { FileText } from 'lucide-react';
 import { useAIEditor } from '@/hooks/useAIEditor';
 import { useMorphEditor } from '@/hooks/useMorphEditor';
 import { usePDFCompiler } from '@/hooks/usePDFCompiler';
@@ -327,14 +328,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
             </Link>
           </Button>
 
-          <Button
-            onClick={() => setShowImageManager(!showImageManager)}
-            variant="outline"
-            size="sm"
-            title="Manage Images"
-          >
-            🖼️ Images
-          </Button>
+          
           
           {/* Editable Title */}
           {isEditingTitle ? (
@@ -497,9 +491,20 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
             style={{ width: `${panelResize.leftPanelWidth}%` }}
           >
             <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
-              <h2 className="text-sm font-medium">
-                LaTeX Code {isViewingVersion && '(Read-Only)'}
-              </h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setShowImageManager(!showImageManager)}
+                  variant="ghost"
+                  size="icon-sm"
+                  title="Manage Images"
+                  className="h-6 w-6"
+                >
+                  <FileText className="h-4 w-4" />
+                </Button>
+                <h2 className="text-sm font-medium">
+                  LaTeX Code {isViewingVersion && '(Read-Only)'}
+                </h2>
+              </div>
             </div>
             <div className="flex-1 min-h-0">
               <MonacoLaTeXEditor

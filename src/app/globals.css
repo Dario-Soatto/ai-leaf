@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -39,8 +38,8 @@
   --sidebar-ring: oklch(0.6716 0.1368 48.5130);
   
   /* Map Next.js font variables to theme variables */
-  --font-sans: var(--font-geist-mono); /* ⭐ Use Geist Mono as main font */
-  --font-mono: var(--font-geist-mono); /* ⭐ Also use for code */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
   --font-serif: serif;
   
   --radius: 0.75rem;

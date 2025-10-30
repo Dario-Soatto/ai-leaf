@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -19,18 +10,18 @@ export const metadata: Metadata = {
   },
   description: "Create beautiful LaTeX documents with AI assistance. A modern editor with real-time PDF preview and intelligent editing suggestions.",
   keywords: ["LaTeX", "editor", "AI", "PDF", "document editor", "academic writing"],
-  authors: [{ name: "Your Name" }], // Replace with your name
-  creator: "Your Name", // Replace with your name
+  authors: [{ name: "Your Name" }],
+  creator: "Your Name",
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://www.latex.soatto.com", // Replace with your actual domain
+    url: "https://www.latex.soatto.com",
     title: "AI LaTeX Editor",
     description: "Create beautiful LaTeX documents with AI assistance",
     siteName: "AI LaTeX Editor",
     images: [
       {
-        url: "/og-image.png", // You can add this later
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "AI LaTeX Editor Preview",
@@ -41,7 +32,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AI LaTeX Editor",
     description: "Create beautiful LaTeX documents with AI assistance",
-    images: ["/og-image.png"], // You can add this later
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
@@ -50,7 +41,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png", // You can add this later
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -61,9 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
         {children}
       </body>
     </html>
