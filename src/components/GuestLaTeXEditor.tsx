@@ -47,6 +47,21 @@ export default function GuestLaTeXEditor() {
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const MAX_HISTORY = 20;
 
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleFixError = () => {
+    if (!pdfCompiler.compileError) return;
+    
+    const errorMessage = `The following error occurred while compiling the LaTeX document. Please resolve the error:\n\n${pdfCompiler.compileError}`;
+    
+    if (chatInputRef.current) {
+      chatInputRef.current.value = errorMessage;
+      chatInputRef.current.focus();
+      // Scroll to bottom of chat input
+      chatInputRef.current.scrollTop = chatInputRef.current.scrollHeight;
+    }
+  };
+
   // ⭐ ADD THIS FUNCTION
   const saveToUndoStack = useCallback(() => {
     setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
@@ -259,16 +274,25 @@ export default function GuestLaTeXEditor() {
               </div>
             )}
 
-            {pdfCompiler.compileError && (
-              <div className="p-4 h-full flex items-center justify-center">
-                <Alert variant="destructive" className="max-w-md">
-                  <AlertDescription>
-                    <h3 className="font-medium mb-2">Compilation Error</h3>
-                    <p className="text-sm">{pdfCompiler.compileError}</p>
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
+              {pdfCompiler.compileError && (
+                <div className="p-4 h-full overflow-auto">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-destructive">Compilation Error</h3>
+                      <Button
+                        onClick={handleFixError}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Fix In Chat
+                      </Button>
+                    </div>
+                    <pre className="text-xs whitespace-pre-wrap overflow-auto bg-destructive/10 p-3 rounded border border-destructive/30 font-mono text-foreground">
+                      {pdfCompiler.compileError}
+                    </pre>
+                  </div>
+                </div>
+              )}
 
             {pdfCompiler.pdfUrl && !pdfCompiler.isCompiling && (
               <iframe
@@ -435,12 +459,13 @@ export default function GuestLaTeXEditor() {
               {/* Chat Input */}
               <div className="p-4 border-t">
                 <form onSubmit={handleChatSubmit} className="relative">
-                  <textarea
+                <textarea
+                    ref={chatInputRef}
                     name="message"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={aiEditor.isAIProcessing}
                     rows={3}
-                    className="w-full px-3 py-2 pr-12 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 resize-none"
+                    className="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -612,12 +637,13 @@ export default function GuestLaTeXEditor() {
               {/* Chat Input */}
               <div className="p-4 border-t">
                 <form onSubmit={handleChatSubmit} className="relative">
-                  <textarea
+                <textarea
+                    ref={chatInputRef}
                     name="message"
                     placeholder="Ask me to help with your LaTeX..."
                     disabled={morphEditor.isProcessing}
                     rows={3}
-                    className="w-full px-3 py-2 pr-12 border border-input rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 resize-none"
+                    className="w-full px-3 py-2 pr-12 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 resize-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
