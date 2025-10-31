@@ -70,26 +70,48 @@ ${currentLatex}
 ${conversationContext}
 ${imagesContext}
 
-User request: "${userRequest}"
+ser request: "${userRequest}"
 
 Please generate specific changes for the LaTeX document. For each change, provide:
 1. A clear description of what the change does
-2. The edit snippet in Morph format using // ... existing code ... markers
+2. The edit snippet in Morph format with SUFFICIENT CONTEXT
 3. Your confidence level (0-1)
 
-IMPORTANT: Use the Morph edit format with // ... existing code ... markers to indicate unchanged sections.
+CRITICAL: Include enough surrounding code for MorphLLM to uniquely identify the location.
 
-Example format:
+Morph Format Rules:
+- Include 2-3 lines of ACTUAL CODE before the change (not just // ... existing code ...)
+- Include 2-3 lines of ACTUAL CODE after the change
+- Use // ... existing code ... only at the START and END to indicate distant sections
+- The surrounding code must be unique enough to locate the edit position
+
+GOOD Example (sufficient context):
+\`\`\`
+// ... existing code ...
+\\section{Introduction}
+This paper explores...
+
+\\section{New Section}
+This is new content I'm adding.
+
+\\section{Methods}
+We used the following...
+// ... existing code ...
+\`\`\`
+
+BAD Example (insufficient context):
+\`\`\`
 // ... existing code ...
 \\section{New Section}
-This is a new section I'm adding.
+This is new content.
 // ... existing code ...
+\`\`\`
 
 Guidelines:
 - Break down complex requests into individual, logical changes
 - Each change should be self-contained and independently applicable
-- Use // ... existing code ... to mark unchanged sections
-- Provide sufficient context around changes to avoid ambiguity
+- Provide CONCRETE surrounding lines, not just markers
+- Include enough context that a human could find the location by searching
 - Make sure each change has a clear, specific purpose
 - Consider the conversation context when interpreting requests
 - When using images, only reference files from the available images list
