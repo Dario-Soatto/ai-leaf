@@ -5,7 +5,11 @@ import LogoutButton from '@/components/LogoutButton';
 import { Button } from '@/components/ui/button';
 import { LayoutDashboard } from 'lucide-react';
 import HeroVideo from '@/components/HeroVideo';
+import FeatureSection from '@/components/FeatureSection';
 import { Metadata } from 'next';
+import HighlightFeatures from '@/components/HighlightFeatures';
+import FAQSection from '@/components/FAQSection';
+
 
 export const metadata: Metadata = {
   title: "AI-Powered LaTeX Editor - Create Beautiful Documents",
@@ -76,7 +80,7 @@ export default async function Home() {
         </header>
 
         {/* Hero section - add padding-top to account for fixed header */}
-        <div className="flex flex-col items-center justify-center flex-1 px-8 pt-[5.5rem]">
+        <div className="flex flex-col items-center justify-center flex-1 px-8 pt-32 pb-12">
           <h1 className="text-8xl font-light mb-6 text-center font-[family-name:var(--font-playfair)]">
             LaTeX, made easy
           </h1>
@@ -104,8 +108,37 @@ export default async function Home() {
           </Link>
         </div>
 
+        {/* Features Section */}
+        <section className="w-full py-24 px-8 bg-background">
+          <div className="container mx-auto max-w-5xl px-6">
+            <h2 className="text-5xl md:text-6xl font-light text-center mb-20 font-[family-name:var(--font-playfair)]">
+              Everything You Wish Overleaf Could Do
+            </h2>
+            
+            <FeatureSection />
+          </div>
+        </section>
+
+        {/* Highlight Features Section */}
+        <section className="w-full py-8 px-8">
+          <div className="container mx-auto max-w-5xl px-6">
+            <HighlightFeatures />
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="w-full py-24 px-8">
+          <div className="container mx-auto max-w-5xl px-6">
+            <h2 className="text-5xl md:text-6xl font-light text-center mb-20 font-[family-name:var(--font-playfair)]">
+              Frequently Asked Questions
+            </h2>
+            
+            <FAQSection />
+          </div>
+        </section>
+
         {/* Footer */}
-        <footer className="border-t bg-card/50 mt-20">
+        <footer className="border-t bg-card/50">
           <div className="container mx-auto max-w-5xl px-6 py-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <p className="text-sm text-muted-foreground">
