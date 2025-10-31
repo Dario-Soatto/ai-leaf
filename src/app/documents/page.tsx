@@ -5,6 +5,7 @@ import LogoutButton from '@/components/LogoutButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Plus, FileText } from 'lucide-react';
 
 export default async function DocumentsPage() {
   const supabase = await createServerSupabaseClient();
@@ -27,16 +28,24 @@ export default async function DocumentsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-sm">
         <div className="container mx-auto max-w-4xl px-6 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold tracking-tight">
-              My LaTeX Documents
-            </h1>
-            <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                My Documents
+              </h1>
+              {user.email && (
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {user.email}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
               <form action="/api/documents/create" method="POST">
-                <Button type="submit" size="lg">
-                  + New Document
+                <Button type="submit" size="default" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Document
                 </Button>
               </form>
               <LogoutButton />

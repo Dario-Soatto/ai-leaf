@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
+import { Playfair_Display } from 'next/font/google';
 import "./globals.css";
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap',
+  weight: ['400', '400'], // Light and regular weights
+});
 
 export const metadata: Metadata = {
   title: {
@@ -52,7 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${GeistSans.variable} ${GeistMono.variable} antialiased`}>
+      <body className={`${GeistSans.variable} ${GeistMono.variable} ${playfair.variable} antialiased`}>
         {children}
       </body>
     </html>
