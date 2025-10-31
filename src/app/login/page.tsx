@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -63,17 +63,6 @@ export default function LoginPage() {
             Create beautiful documents with AI assistance
           </p>
         </div>
-
-        {/* Demo Link */}
-        <Button 
-          asChild
-          variant="outline" 
-          className="w-full"
-        >
-          <Link href="/demo">
-            ✨ Try Demo (No Login Required)
-          </Link>
-        </Button>
         
         <Card>
           <CardHeader>

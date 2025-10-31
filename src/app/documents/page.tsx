@@ -29,14 +29,14 @@ export default async function DocumentsPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-sm">
-        <div className="container mx-auto max-w-4xl px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
+        <div className="container mx-auto max-w-5xl px-6 py-4">
+          <div className="flex items-center justify-between h-12">
+            <div className="flex flex-col justify-center h-full">
+              <h1 className="text-xl font-bold tracking-tight leading-tight">
                 My Documents
               </h1>
               {user.email && (
-                <p className="text-sm text-muted-foreground mt-0.5">
+                <p className="text-xs text-muted-foreground leading-tight">
                   {user.email}
                 </p>
               )}
@@ -55,7 +55,7 @@ export default async function DocumentsPage() {
       </header>
 
       {/* Documents List */}
-      <main className="container mx-auto max-w-4xl px-6 py-8">
+      <main className="container mx-auto max-w-5xl px-6 py-8">
         {!documents || documents.length === 0 ? (
           <Card className="mx-auto max-w-md text-center">
             <CardHeader>
