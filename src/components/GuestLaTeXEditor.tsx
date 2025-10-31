@@ -13,6 +13,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea'; // ⭐ Add this import
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from 'lucide-react';
 
 type EditingMode = 'complete' | 'morph';
 
@@ -186,7 +193,43 @@ export default function GuestLaTeXEditor() {
         <div className="flex items-center gap-4">
           {/* Editing Mode Toggle */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Mode:</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-muted-foreground">Mode</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="inline-flex items-center justify-center">
+                      <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-sm" side="bottom">
+                    <div className="space-y-3">
+                      <div className="font-semibold text-sm">AI Editing Modes</div>
+                      
+                      <div className="space-y-1">
+                        <div className="font-medium text-sm">Diff Edit</div>
+                        <p className="text-xs text-muted-foreground">
+                          AI suggests specific edits with context, which you can review and apply individually or collectively.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <span className="font-medium">Use for:</span> Most cases. Faster latency.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="font-medium text-sm">Full Rewrite</div>
+                        <p className="text-xs text-muted-foreground">
+                          AI rewrites the entire document. Content that is not part of the request is preserved.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          <span className="font-medium">Use for:</span> Major restructuring, complete rewrites, error correction. Slower latency.
+                        </p>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <div className="flex gap-1">
               <Button
                 onClick={() => setEditingMode('complete')}
@@ -279,13 +322,29 @@ export default function GuestLaTeXEditor() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium text-destructive">Compilation Error</h3>
-                      <Button
-                        onClick={handleFixError}
-                        size="sm"
-                        variant="outline"
-                      >
-                        Fix In Chat
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button className="inline-flex items-center justify-center">
+                                <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground transition-colors" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs" side="left">
+                              <p className="text-xs">
+                                If you get stuck with a compilation error Diff Editing can't fix, I'd recommend trying Complete Rewrite.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <Button
+                          onClick={handleFixError}
+                          size="sm"
+                          variant="outline"
+                        >
+                          Fix In Chat
+                        </Button>
+                      </div>
                     </div>
                     <pre className="text-xs whitespace-pre-wrap overflow-auto bg-destructive/10 p-3 rounded border border-destructive/30 font-mono text-foreground">
                       {pdfCompiler.compileError}
