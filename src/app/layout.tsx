@@ -8,48 +8,75 @@ const playfair = Playfair_Display({
   subsets: ['latin'],
   variable: '--font-playfair',
   display: 'swap',
-  weight: ['400', '400'], // Light and regular weights
+  weight: ['400', '400'],
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://cursorforlatex.com'),
   title: {
-    default: "AI LaTeX Editor",
-    template: "%s | AI LaTeX Editor",
+    default: "Cursor for LaTeX - AI-Powered LaTeX Editor",
+    template: "%s | Cursor for LaTeX",
   },
-  description: "Create beautiful LaTeX documents with AI assistance. A modern editor with real-time PDF preview and intelligent editing suggestions.",
-  keywords: ["LaTeX", "editor", "AI", "PDF", "document editor", "academic writing"],
-  authors: [{ name: "Your Name" }],
-  creator: "Your Name",
+  description: "Create beautiful LaTeX documents with AI assistance. Modern editor with real-time PDF preview, intelligent editing, and instant compilation. Perfect for academic papers, research, and technical writing.",
+  keywords: [
+    "LaTeX editor",
+    "AI LaTeX",
+    "LaTeX online",
+    "PDF preview",
+    "academic writing",
+    "research paper editor",
+    "technical writing",
+    "LaTeX compiler",
+    "document editor",
+    "mathematical typesetting",
+    "scientific writing",
+    "thesis editor"
+  ],
+  authors: [{ name: "Cursor for LaTeX" }],
+  creator: "Cursor for LaTeX",
+  publisher: "Cursor for LaTeX",
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://www.latex.soatto.com",
-    title: "AI LaTeX Editor",
-    description: "Create beautiful LaTeX documents with AI assistance",
-    siteName: "AI LaTeX Editor",
+    url: "https://cursorforlatex.com",
+    title: "Cursor for LaTeX - AI-Powered LaTeX Editor",
+    description: "Create beautiful LaTeX documents with AI assistance. Real-time preview, intelligent editing, and instant compilation.",
+    siteName: "Cursor for LaTeX",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "AI LaTeX Editor Preview",
+        alt: "Cursor for LaTeX Editor Preview",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI LaTeX Editor",
-    description: "Create beautiful LaTeX documents with AI assistance",
+    title: "Cursor for LaTeX - AI-Powered LaTeX Editor",
+    description: "Create beautiful LaTeX documents with AI assistance. Real-time preview and intelligent editing.",
     images: ["/og-image.png"],
+    creator: "@yourtwitterhandle", // Add your Twitter handle
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
   icons: {
     icon: "/icon.png",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
+  manifest: "/manifest.json",
+  alternates: {
+    canonical: "https://cursorforlatex.com",
   },
 };
 
@@ -60,6 +87,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="canonical" href="https://cursorforlatex.com" />
+      </head>
       <body className={`${GeistSans.variable} ${GeistMono.variable} ${playfair.variable} antialiased`}>
         {children}
       </body>

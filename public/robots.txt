@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /editor/
+Disallow: /documents
+
+Sitemap: https://cursorforlatex.com/sitemap.xml
