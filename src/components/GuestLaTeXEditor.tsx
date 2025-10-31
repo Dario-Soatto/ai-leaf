@@ -332,18 +332,18 @@ export default function GuestLaTeXEditor() {
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs" side="left">
                               <p className="text-xs">
-                                If you get stuck with a compilation error Diff Editing can't fix, I'd recommend trying Complete Rewrite.
+                                If you get stuck with a compilation error Diff Editing can&apos;t fix, I&apos;d recommend trying Complete Rewrite.
                               </p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        <Button
-                          onClick={handleFixError}
-                          size="sm"
-                          variant="outline"
-                        >
-                          Fix In Chat
-                        </Button>
+                      <Button
+                        onClick={handleFixError}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Fix In Chat
+                      </Button>
                       </div>
                     </div>
                     <pre className="text-xs whitespace-pre-wrap overflow-auto bg-destructive/10 p-3 rounded border border-destructive/30 font-mono text-foreground">
