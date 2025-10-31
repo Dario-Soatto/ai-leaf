@@ -28,7 +28,7 @@ export default async function DocumentsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-white shadow-sm">
         <div className="container mx-auto max-w-5xl px-6 py-4">
           <div className="flex items-center justify-between h-12">
             <div className="flex flex-col justify-center h-full">
@@ -54,8 +54,8 @@ export default async function DocumentsPage() {
         </div>
       </header>
 
-      {/* Documents List */}
-      <main className="container mx-auto max-w-5xl px-6 py-8">
+      {/* Documents List - add padding-top to account for fixed header */}
+      <main className="container mx-auto max-w-5xl px-6 py-8 pt-24">
         {!documents || documents.length === 0 ? (
           <Card className="mx-auto max-w-md text-center">
             <CardHeader>

@@ -13,7 +13,7 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-white shadow-sm">
         <div className="container mx-auto max-w-5xl px-6 py-4">
           <div className="flex items-center justify-between">
             <Image 
@@ -43,8 +43,8 @@ export default async function Home() {
         </div>
       </header>
 
-      {/* Hero section */}
-      <div className="flex flex-col items-center justify-center flex-1 px-8 pt-16">
+      {/* Hero section - add padding-top to account for fixed header */}
+      <div className="flex flex-col items-center justify-center flex-1 px-8 pt-[5.5rem]">
         <h1 className="text-8xl font-light mb-6 text-center font-[family-name:var(--font-playfair)]">
           LaTeX, made easy
         </h1>
