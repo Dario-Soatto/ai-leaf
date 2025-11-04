@@ -37,10 +37,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract image filenames from LaTeX
-    const imageFilenames = extractImageFilenames(latex);
-    console.log('Found image references:', imageFilenames);
-
     // Create form data for texlive.net
     const formData = new FormData();
     
@@ -50,10 +46,50 @@ export async function POST(request: NextRequest) {
     // Required: return parameter (pdf to get the PDF directly)
     formData.append('return', 'pdf');
 
-    // Add the main LaTeX file with nonstopmode
-    const latexWithNonstop = `\\nonstopmode\n${latex}`;
-    formData.append('filename[]', 'document.tex');
-    formData.append('filecontents[]', latexWithNonstop);
+    // Fetch and add all document files if documentId is provided
+    if (documentId) {
+      console.log('Fetching document files from Supabase...');
+      
+      const { data: files, error: filesError } = await supabase
+        .from('document_files')
+        .select('*')
+        .eq('document_id', documentId)
+        .order('display_order', { ascending: true });
+
+      if (filesError) {
+        console.error('Error fetching files:', filesError);
+        return NextResponse.json(
+          { error: 'Failed to fetch document files' },
+          { status: 500 }
+        );
+      }
+
+      if (files && files.length > 0) {
+        // Add all document files
+        // The main file must be named document.tex for texlive.net
+        for (const file of files) {
+          const content = file.is_main ? `\\nonstopmode\n${file.content}` : file.content;
+          const filename = file.is_main ? 'document.tex' : file.filename;
+          formData.append('filename[]', filename);
+          formData.append('filecontents[]', content);
+          console.log(`Added file to submission: ${filename}`);
+        }
+      } else {
+        // Fallback: no files in database, use the provided latex
+        const latexWithNonstop = `\\nonstopmode\n${latex}`;
+        formData.append('filename[]', 'document.tex');
+        formData.append('filecontents[]', latexWithNonstop);
+      }
+    } else {
+      // No documentId: just use the provided latex (for demo mode)
+      const latexWithNonstop = `\\nonstopmode\n${latex}`;
+      formData.append('filename[]', 'document.tex');
+      formData.append('filecontents[]', latexWithNonstop);
+    }
+
+    // Extract image filenames from the main LaTeX file for image fetching
+    const imageFilenames = extractImageFilenames(latex);
+    console.log('Found image references:', imageFilenames);
 
     // Fetch and add images if there are any
     if (imageFilenames.length > 0 && documentId) {

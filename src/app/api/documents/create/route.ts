@@ -42,6 +42,23 @@ export async function POST() {
     redirect('/documents');
   }
 
+  // Create the main.tex file for this document
+  const { error: fileError } = await supabase
+    .from('document_files')
+    .insert({
+      document_id: document.id,
+      filename: 'main.tex',
+      file_type: 'tex',
+      content: DEFAULT_LATEX,
+      is_main: true,
+      display_order: 0,
+    });
+
+  if (fileError) {
+    console.error('Error creating main file:', fileError);
+    // Continue anyway - the migration SQL will handle this if needed
+  }
+
   // Redirect to the editor for this new document
   redirect(`/editor/${document.id}`);
 }

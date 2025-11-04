@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import FileManager from './FileManager';
+import { useFileManager, DocumentFile } from '@/hooks/useFileManager';
 import { FileText } from 'lucide-react';
 import { useAIEditor } from '@/hooks/useAIEditor';
 import { useMorphEditor } from '@/hooks/useMorphEditor';
@@ -55,17 +57,26 @@ interface LaTeXEditorProps {
 }
 
 export default function LaTeXEditor({ document }: LaTeXEditorProps) {
-  const [latexCode, setLatexCode] = useState(document.current_latex);
-  const [currentLatexContent, setCurrentLatexContent] = useState(document.current_latex);
+  // Multi-file state management
+  const fileManager = useFileManager(document.id);
+  const [activeFile, setActiveFile] = useState<DocumentFile | null>(null);
+  const [editorContent, setEditorContent] = useState('');
+  const [currentEditorContent, setCurrentEditorContent] = useState('');
+  
+  // UI state
+  const [showFileManager, setShowFileManager] = useState(true);
+  const [showImageManager, setShowImageManager] = useState(false);
   const [editingMode, setEditingMode] = useState<EditingMode>('morph');
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreparingCompile, setIsPreparingCompile] = useState(false);
+  const [title, setTitle] = useState(document.title);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  
+  // Version history state
   const [versions, setVersions] = useState<Version[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<Version | null>(null);
   const [isViewingVersion, setIsViewingVersion] = useState(false);
-  const [title, setTitle] = useState(document.title);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [showImageManager, setShowImageManager] = useState(false);
   const { images } = useImageManager(document.id);
   const availableImageFilenames = images.map(img => img.filename);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -84,48 +95,78 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   };
   
 
-  // ⭐ ADD SHARED UNDO/REDO STATE
+  // Undo/Redo state
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const MAX_HISTORY = 20;
 
   const supabase = useMemo(() => createClient(), []);
 
-  // ⭐ ADD THIS FUNCTION
+  // Save current content to undo stack
   const saveToUndoStack = useCallback(() => {
-    setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
+    setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), editorContent]);
     setRedoStack([]); // Clear redo stack when new edit is applied
-  }, [latexCode]);
+  }, [editorContent]);
 
   // Use custom hooks
   const pdfCompiler = usePDFCompiler(document.id);
   const panelResize = usePanelResize();
   
-  // ⭐ UPDATE THESE LINES TO ADD saveToUndoStack PARAMETER
-  // Use the appropriate editor hook based on mode
+  // Combined compiling state (includes preparing/saving phase)
+  const isCompiling = isPreparingCompile || pdfCompiler.isCompiling;
+  
+  // Compile with auto-save wrapper (defined before AI hooks need it)
+  const compileWithSave = useCallback(async (content?: string) => {
+    // Force-save active file if there are changes
+    if (activeFile && editorContent !== activeFile.content) {
+      console.log('💾 Saving before compile');
+      try {
+        await fileManager.updateFile(activeFile.id, editorContent);
+        await fileManager.refreshFiles();
+      } catch (error) {
+        console.error('Error saving before compile:', error);
+        return;
+      }
+    }
+    
+    const mainFile = fileManager.files.find(f => f.is_main);
+    if (!mainFile) {
+      console.error('No main file found');
+      return;
+    }
+
+    await pdfCompiler.compileLatex(content || mainFile.content);
+  }, [activeFile, editorContent, fileManager, pdfCompiler]);
+  
+  // AI editing hooks - work with the active file's content
   const aiEditor = useAIEditor(
-    latexCode, 
-    setLatexCode, 
+    editorContent, 
+    setEditorContent, 
     pdfCompiler.setPdfUrl, 
     pdfCompiler.setCompileError, 
-    pdfCompiler.compileLatex,
+    compileWithSave,
     saveToUndoStack,
-    availableImageFilenames  // Add this parameter
+    availableImageFilenames
   );
   const morphEditor = useMorphEditor(
-    latexCode, 
-    setLatexCode, 
+    editorContent, 
+    setEditorContent, 
     pdfCompiler.setPdfUrl, 
     pdfCompiler.setCompileError, 
-    pdfCompiler.compileLatex,
+    compileWithSave,
     saveToUndoStack,
-    availableImageFilenames  // Add this parameter
+    availableImageFilenames
   );
 
-  // Auto-compile on mount
+  // Initialize active file when files load
   useEffect(() => {
-    pdfCompiler.compileLatex(latexCode);
-  }, []); // Empty dependency array = run once on mount
+    if (fileManager.files.length > 0 && !activeFile) {
+      const mainFile = fileManager.files.find(f => f.is_main) || fileManager.files[0];
+      setActiveFile(mainFile);
+      setEditorContent(mainFile.content);
+      setCurrentEditorContent(mainFile.content);
+    }
+  }, [fileManager.files, activeFile]);
 
   // Fetch versions on mount
   useEffect(() => {
@@ -146,13 +187,9 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     fetchVersions();
   }, [document.id, supabase]);
 
-  // Auto-save functionality
+  // Auto-save active file
   useEffect(() => {
-    // Don't auto-save if viewing an old version
-    if (isViewingVersion) return;
-
-    // Update the current content tracker
-    setCurrentLatexContent(latexCode);
+    if (isViewingVersion || !activeFile) return;
 
     // Clear any existing timeout
     if (saveTimeoutRef.current) {
@@ -164,37 +201,36 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
       setIsSaving(true);
       
       try {
-        await supabase
-          .from('documents')
-          .update({ 
-            current_latex: latexCode,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', document.id);
+        await fileManager.updateFile(activeFile.id, editorContent);
+        console.log('✅ Auto-saved:', activeFile.filename, 'length:', editorContent.length);
       } catch (error) {
-        console.error('Error saving document:', error);
+        console.error('❌ Save error:', error);
       } finally {
         setIsSaving(false);
       }
     }, 2000);
 
-    // Cleanup on unmount
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [latexCode, document.id, supabase, isViewingVersion]);
+    // Only trigger on editorContent changes or when switching active file
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorContent, activeFile?.id, isViewingVersion]);
 
-  // Function to save a version
+  // Function to save a version (saves the main file)
   const saveVersion = async () => {
     try {
+      const mainFile = fileManager.files.find(f => f.is_main);
+      if (!mainFile) return;
+
       const { data } = await supabase
         .from('versions')
         .insert({
           document_id: document.id,
           user_id: document.user_id,
-          latex_content: latexCode,
+          latex_content: mainFile.content,
           trigger_type: 'manual_compile'
         })
         .select()
@@ -213,11 +249,16 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
 
   // Handle compile with version saving
   const handleCompile = async () => {
-    await pdfCompiler.compileLatex(latexCode);
+    setIsPreparingCompile(true);
     
-    // Save version after successful compilation
-    if (!pdfCompiler.compileError) {
-      await saveVersion();
+    try {
+      await compileWithSave();
+      
+      if (!pdfCompiler.compileError) {
+        await saveVersion();
+      }
+    } finally {
+      setIsPreparingCompile(false);
     }
   };
 
@@ -226,26 +267,54 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     if (versionId === 'current') {
       setSelectedVersion(null);
       setIsViewingVersion(false);
-      setLatexCode(currentLatexContent);  // ← Use the tracked current content instead!
+      setEditorContent(currentEditorContent);
     } else {
       const version = versions.find(v => v.id === versionId);
       if (version) {
         setSelectedVersion(version);
         setIsViewingVersion(true);
-        setLatexCode(version.latex_content);
+        setEditorContent(version.latex_content);
       }
     }
   };
 
   // Restore a version as current
   const handleRestoreVersion = async () => {
-    if (!selectedVersion) return;
+    if (!selectedVersion || !activeFile) return;
     
     setIsViewingVersion(false);
     setSelectedVersion(null);
-    setCurrentLatexContent(selectedVersion.latex_content);  // ← Also update the tracker
-    // latexCode is already set to the version content, auto-save will handle the rest
+    setCurrentEditorContent(selectedVersion.latex_content);
+    // editorContent is already set to the version content, auto-save will handle the rest
   };
+
+  // Handle file selection
+const handleFileSelect = useCallback(async (file: DocumentFile) => {
+  // Cancel any pending auto-save
+  if (saveTimeoutRef.current) {
+    clearTimeout(saveTimeoutRef.current);
+  }
+  
+  // Force-save current file if there are changes
+  if (activeFile && editorContent !== activeFile.content && !isViewingVersion) {
+    console.log('💾 Saving on switch:', activeFile.filename);
+    await fileManager.updateFile(activeFile.id, editorContent);
+  }
+  
+  // Get the FRESH file data from fileManager.files (not the stale parameter)
+  const freshFile = fileManager.files.find(f => f.id === file.id);
+  if (!freshFile) {
+    console.error('File not found:', file.id);
+    return;
+  }
+  
+  console.log('📂 Opening file:', freshFile.filename, 'content length:', freshFile.content.length);
+  
+  // Switch to new file with fresh content
+  setActiveFile(freshFile);
+  setEditorContent(freshFile.content);
+  setCurrentEditorContent(freshFile.content);
+}, [activeFile, editorContent, isViewingVersion, fileManager]);
 
   const handleChatSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -290,6 +359,26 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     }
   };
 
+  // Undo function
+  const undo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    
+    const previousContent = undoStack[undoStack.length - 1];
+    setRedoStack(prev => [...prev, editorContent]);
+    setUndoStack(prev => prev.slice(0, -1));
+    setEditorContent(previousContent);
+  }, [undoStack, editorContent]);
+
+  // Redo function
+  const redo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    
+    const nextContent = redoStack[redoStack.length - 1];
+    setUndoStack(prev => [...prev, editorContent]);
+    setRedoStack(prev => prev.slice(0, -1));
+    setEditorContent(nextContent);
+  }, [redoStack, editorContent]);
+
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleTitleSubmit();
@@ -316,26 +405,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [latexCode, pdfCompiler.compileError]); // Dependencies: rerun when these change
-
-  // ⭐ ADD THESE UNDO/REDO FUNCTIONS
-  const undo = useCallback(() => {
-    if (undoStack.length === 0) return;
-    
-    const previousState = undoStack[undoStack.length - 1];
-    setRedoStack(prev => [latexCode, ...prev.slice(0, MAX_HISTORY - 1)]);
-    setUndoStack(prev => prev.slice(0, -1));
-    setLatexCode(previousState);
-  }, [undoStack, latexCode]);
-
-  const redo = useCallback(() => {
-    if (redoStack.length === 0) return;
-    
-    const nextState = redoStack[0];
-    setUndoStack(prev => [...prev.slice(-MAX_HISTORY + 1), latexCode]);
-    setRedoStack(prev => prev.slice(1));
-    setLatexCode(nextState);
-  }, [redoStack, latexCode]);
+  }, [editorContent, pdfCompiler.compileError, handleCompile]); // Dependencies: rerun when these change
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -526,15 +596,57 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
         </Alert>
       )}
 
-      {/* Main Layout: Image Panel (left) + Three Panel Layout (right) */}
+      {/* Main Layout: Files/Images Panel (left) + Three Panel Layout (right) */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Image Manager (collapsible) */}
-        {showImageManager && (
+        {/* Left Sidebar - Files and Images Manager (collapsible) */}
+        {(showFileManager || showImageManager) && (
           <>
-            <div className="border-r flex flex-col bg-background" style={{ width: '300px' }}>
-              <ImageManager documentId={document.id} />
+            <div className="w-64 border-r flex flex-col bg-background">
+              {/* Tabs */}
+              <div className="flex border-b bg-muted/50">
+                <button
+                  onClick={() => {
+                    setShowFileManager(true);
+                    setShowImageManager(false);
+                  }}
+                  className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                    showFileManager
+                      ? 'bg-muted border-b-2 border-primary text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Files
+                </button>
+                <button
+                  onClick={() => {
+                    setShowFileManager(false);
+                    setShowImageManager(true);
+                  }}
+                  className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                    showImageManager
+                      ? 'bg-muted border-b-2 border-primary text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Images
+                </button>
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1 overflow-hidden">
+                {showFileManager && (
+                  <FileManager
+                    documentId={document.id}
+                    activeFileId={activeFile?.id || null}
+                    onFileSelect={handleFileSelect}
+                  />
+                )}
+                {showImageManager && (
+                  <ImageManager documentId={document.id} />
+                )}
+              </div>
             </div>
-            {/* Divider between image panel and editor */}
+            {/* Divider between panel and editor */}
             <div className="w-1 bg-border" />
           </>
         )}
@@ -549,23 +661,30 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
             <div className="bg-muted/50 px-4 py-2 border-b flex items-center justify-between h-10">
               <div className="flex items-center gap-2">
                 <Button
-                  onClick={() => setShowImageManager(!showImageManager)}
+                  onClick={() => {
+                    if (showFileManager || showImageManager) {
+                      setShowFileManager(false);
+                      setShowImageManager(false);
+                    } else {
+                      setShowFileManager(true);
+                    }
+                  }}
                   variant="ghost"
                   size="icon-sm"
-                  title="Manage Images"
+                  title="Toggle Files/Images Panel"
                   className="h-6 w-6"
                 >
                   <FileText className="h-4 w-4" />
                 </Button>
                 <h2 className="text-sm font-medium">
-                  LaTeX Code {isViewingVersion && '(Read-Only)'}
+                  {activeFile?.filename || 'LaTeX Code'} {isViewingVersion && '(Read-Only)'}
                 </h2>
               </div>
             </div>
             <div className="flex-1 min-h-0">
               <MonacoLaTeXEditor
-                value={latexCode}
-                onChange={setLatexCode}
+                value={editorContent}
+                onChange={setEditorContent}
                 proposedChanges={[]}
                 onApplyChange={morphEditor.applyChange}
                 onRejectChange={morphEditor.rejectChange}
@@ -590,10 +709,10 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
               <h2 className="text-sm font-medium">PDF Preview</h2>
               <Button
                 onClick={handleCompile}
-                disabled={pdfCompiler.isCompiling}
+                disabled={isCompiling}
                 size="sm"
               >
-                {pdfCompiler.isCompiling ? 'Compiling...' : 'Compile'}
+                {isCompiling ? 'Compiling...' : 'Compile'}
               </Button>
             </div>
             <div className="flex-1 overflow-hidden relative">
@@ -601,7 +720,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                 <div className="absolute inset-0 z-50" />
               )}
               
-              {pdfCompiler.isCompiling && (
+              {isCompiling && (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
@@ -646,7 +765,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                 </div>
               )}
 
-              {pdfCompiler.pdfUrl && !pdfCompiler.isCompiling && (
+              {pdfCompiler.pdfUrl && !isCompiling && (
                 <iframe
                   src={pdfCompiler.pdfUrl}
                   className="w-full h-full border-0"
@@ -654,7 +773,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
                 />
               )}
 
-              {!pdfCompiler.pdfUrl && !pdfCompiler.isCompiling && !pdfCompiler.compileError && (
+              {!pdfCompiler.pdfUrl && !isCompiling && !pdfCompiler.compileError && (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-sm text-muted-foreground">
                     Click &quot;Compile&quot; to generate PDF preview
