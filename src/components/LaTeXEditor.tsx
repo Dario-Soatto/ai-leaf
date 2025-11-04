@@ -36,9 +36,17 @@ import { Info } from 'lucide-react'; // Add this import
 
 type EditingMode = 'complete' | 'morph';
 
+interface FileSnapshot {
+  filename: string;
+  file_type: string;
+  content: string;
+  is_main: boolean;
+}
+
 interface Version {
   id: string;
   latex_content: string;
+  file_snapshots?: FileSnapshot[];
   trigger_type: string;
   created_at: string;
 }
@@ -219,31 +227,52 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editorContent, activeFile?.id, isViewingVersion]);
 
-  // Function to save a version (saves the main file)
+  // Function to save a version (saves all files)
   const saveVersion = async () => {
     try {
-      const mainFile = fileManager.files.find(f => f.is_main);
-      if (!mainFile) return;
+      // Fetch FRESH file data from database, not local state
+      const response = await fetch(`/api/files/list?documentId=${document.id}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch files');
+      }
 
-      const { data } = await supabase
+      const freshFiles = data.files || [];
+      const mainFile = freshFiles.find((f: any) => f.is_main);
+      if (!mainFile) {
+        console.error('No main file found when saving version');
+        return;
+      }
+
+      // Capture all current files as a snapshot from fresh database data
+      const fileSnapshots: FileSnapshot[] = freshFiles.map((file: any) => ({
+        filename: file.filename,
+        file_type: file.file_type,
+        content: file.content,
+        is_main: file.is_main
+      }));
+
+      const { data: version } = await supabase
         .from('versions')
         .insert({
           document_id: document.id,
           user_id: document.user_id,
-          latex_content: mainFile.content,
+          latex_content: mainFile.content, // For backward compatibility
+          file_snapshots: fileSnapshots,
           trigger_type: 'manual_compile'
         })
         .select()
         .single();
       
       // Add new version to the list
-      if (data) {
-        setVersions(prev => [data, ...prev]);
+      if (version) {
+        setVersions(prev => [version, ...prev]);
       }
       
-      console.log('Version saved successfully');
+      console.log('✅ Version saved successfully with', fileSnapshots.length, 'files from fresh database data');
     } catch (error) {
-      console.error('Error saving version:', error);
+      console.error('❌ Error saving version:', error);
     }
   };
 
@@ -263,58 +292,159 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   };
 
   // Handle version selection
-  const handleVersionSelect = (versionId: string) => {
-    if (versionId === 'current') {
-      setSelectedVersion(null);
-      setIsViewingVersion(false);
-      setEditorContent(currentEditorContent);
-    } else {
-      const version = versions.find(v => v.id === versionId);
-      if (version) {
-        setSelectedVersion(version);
-        setIsViewingVersion(true);
+const handleVersionSelect = (versionId: string) => {
+  if (versionId === 'current') {
+    setSelectedVersion(null);
+    setIsViewingVersion(false);
+    setEditorContent(currentEditorContent);
+    // Restore the active file to current state
+    if (activeFile) {
+      const currentFile = fileManager.files.find(f => f.id === activeFile.id);
+      if (currentFile) {
+        setActiveFile(currentFile);
+        setEditorContent(currentFile.content);
+      }
+    }
+  } else {
+    const version = versions.find(v => v.id === versionId);
+    if (version) {
+      setSelectedVersion(version);
+      setIsViewingVersion(true);
+      
+      // If we have file snapshots, show the main file from the snapshot
+      if (version.file_snapshots && version.file_snapshots.length > 0) {
+        const mainSnapshot = version.file_snapshots.find(f => f.is_main);
+        if (mainSnapshot && activeFile) {
+          // Create a temp file object with snapshot content
+          const tempFile = { ...activeFile, content: mainSnapshot.content };
+          setActiveFile(tempFile);
+          setEditorContent(mainSnapshot.content);
+        }
+      } else {
+        // Fallback for old versions
         setEditorContent(version.latex_content);
       }
     }
-  };
+  }
+};
 
   // Restore a version as current
   const handleRestoreVersion = async () => {
-    if (!selectedVersion || !activeFile) return;
+    if (!selectedVersion) return;
     
-    setIsViewingVersion(false);
-    setSelectedVersion(null);
-    setCurrentEditorContent(selectedVersion.latex_content);
-    // editorContent is already set to the version content, auto-save will handle the rest
+    try {
+      if (selectedVersion.file_snapshots && selectedVersion.file_snapshots.length > 0) {
+        // Call server-side restore API for atomic operation
+        const response = await fetch('/api/versions/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documentId: document.id,
+            fileSnapshots: selectedVersion.file_snapshots
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to restore version');
+        }
+        
+        // Refresh file list from database
+        await fileManager.refreshFiles();
+        
+        // Fetch files directly to get the latest state immediately
+        const filesResponse = await fetch(`/api/files/list?documentId=${document.id}`);
+        const filesData = await filesResponse.json();
+        
+        if (filesResponse.ok && filesData.files) {
+          const mainFile = filesData.files.find((f: any) => f.is_main);
+          if (mainFile) {
+            setActiveFile(mainFile);
+            setEditorContent(mainFile.content);
+            setCurrentEditorContent(mainFile.content);
+          } else {
+            console.error('No main file found after restoration');
+          }
+        }
+      } else {
+        // Fallback for old versions (only main file)
+        // Just update the current active file content
+        if (activeFile) {
+          await fileManager.updateFile(activeFile.id, selectedVersion.latex_content);
+          setEditorContent(selectedVersion.latex_content);
+          setCurrentEditorContent(selectedVersion.latex_content);
+        }
+      }
+      
+      setIsViewingVersion(false);
+      setSelectedVersion(null);
+      
+      console.log('✅ Version restored successfully');
+    } catch (error) {
+      console.error('❌ Error restoring version:', error);
+      alert('Failed to restore version. Please try again.');
+    }
   };
 
-  // Handle file selection
+// Handle file selection
+// Handle file selection
 const handleFileSelect = useCallback(async (file: DocumentFile) => {
   // Cancel any pending auto-save
   if (saveTimeoutRef.current) {
     clearTimeout(saveTimeoutRef.current);
   }
   
-  // Force-save current file if there are changes
+  // Force-save current file if there are changes (only when not viewing version)
   if (activeFile && editorContent !== activeFile.content && !isViewingVersion) {
     console.log('💾 Saving on switch:', activeFile.filename);
     await fileManager.updateFile(activeFile.id, editorContent);
+    // Refresh files after save to update local cache
+    await fileManager.refreshFiles();
   }
   
-  // Get the FRESH file data from fileManager.files (not the stale parameter)
-  const freshFile = fileManager.files.find(f => f.id === file.id);
-  if (!freshFile) {
-    console.error('File not found:', file.id);
-    return;
+  // If viewing a version, load content from the snapshot instead of current files
+  if (isViewingVersion && selectedVersion?.file_snapshots) {
+    const snapshotFile = selectedVersion.file_snapshots.find(
+      f => f.filename === file.filename
+    );
+    
+    if (snapshotFile) {
+      console.log('📂 Opening snapshot file:', snapshotFile.filename);
+      // Create a temporary DocumentFile object with snapshot content
+      const tempFile = { ...file, content: snapshotFile.content };
+      setActiveFile(tempFile);
+      setEditorContent(snapshotFile.content);
+      return;
+    }
   }
   
-  console.log('📂 Opening file:', freshFile.filename, 'content length:', freshFile.content.length);
+  // Normal flow: Fetch fresh file data from database
+  const response = await fetch(`/api/files/list?documentId=${document.id}`);
+  const data = await response.json();
   
-  // Switch to new file with fresh content
-  setActiveFile(freshFile);
-  setEditorContent(freshFile.content);
-  setCurrentEditorContent(freshFile.content);
-}, [activeFile, editorContent, isViewingVersion, fileManager]);
+  if (response.ok && data.files) {
+    const freshFile = data.files.find((f: any) => f.id === file.id);
+    if (freshFile) {
+      console.log('📂 Opening file:', freshFile.filename, 'content length:', freshFile.content.length);
+      setActiveFile(freshFile);
+      setEditorContent(freshFile.content);
+      setCurrentEditorContent(freshFile.content);
+    } else {
+      // Fallback to passed file if not found in fresh data (shouldn't happen)
+      console.log('📂 Opening file (fallback):', file.filename);
+      setActiveFile(file);
+      setEditorContent(file.content);
+      setCurrentEditorContent(file.content);
+    }
+  } else {
+    // Fallback if fetch fails
+    const cachedFile = fileManager.files.find(f => f.id === file.id) || file;
+    console.log('📂 Opening file (cached):', cachedFile.filename);
+    setActiveFile(cachedFile);
+    setEditorContent(cachedFile.content);
+    setCurrentEditorContent(cachedFile.content);
+  }
+}, [activeFile, editorContent, isViewingVersion, selectedVersion, fileManager, document.id]);
 
   const handleChatSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

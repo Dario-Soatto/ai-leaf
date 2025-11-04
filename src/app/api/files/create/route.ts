@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { documentId, filename, fileType, content = '' } = body;
+    const { documentId, filename, fileType, content = '', isMain = false } = body;
 
     if (!documentId || !filename || !fileType) {
       return NextResponse.json(
@@ -32,6 +32,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Document not found' }, { status: 403 });
     }
 
+    // If this is marked as main, unmark any existing main files
+    if (isMain) {
+      await supabase
+        .from('document_files')
+        .update({ is_main: false })
+        .eq('document_id', documentId)
+        .eq('is_main', true);
+    }
+
     // Create the file
     const { data: file, error } = await supabase
       .from('document_files')
@@ -40,7 +49,7 @@ export async function POST(request: NextRequest) {
         filename,
         file_type: fileType,
         content,
-        is_main: false,
+        is_main: isMain,
         display_order: 999 // Will be at the end
       })
       .select()

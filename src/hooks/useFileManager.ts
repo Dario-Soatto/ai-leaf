@@ -140,6 +140,80 @@ export function useFileManager(documentId: string | null) {
     }
   }, []);
 
+  // Restore files from a version snapshot
+const restoreFiles = useCallback(async (fileSnapshots: Array<{
+    filename: string;
+    file_type: string;
+    content: string;
+    is_main: boolean;
+  }>) => {
+    if (!documentId) {
+      throw new Error('No document ID provided');
+    }
+  
+    setIsLoading(true);
+    setError(null);
+  
+    try {
+      // Get all current file IDs
+      const currentFileIds = files.map(f => f.id);
+  
+      // Delete all current files
+      await Promise.all(currentFileIds.map(fileId => 
+        fetch('/api/files/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileId }),
+        })
+      ));
+  
+      // Create files from snapshots - SEQUENTIALLY to avoid race conditions
+      // Create main file first, then others
+      const mainSnapshot = fileSnapshots.find(s => s.is_main);
+      const otherSnapshots = fileSnapshots.filter(s => !s.is_main);
+      
+      if (mainSnapshot) {
+        await fetch('/api/files/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documentId,
+            filename: mainSnapshot.filename,
+            fileType: mainSnapshot.file_type,
+            content: mainSnapshot.content,
+            isMain: true,
+          }),
+        });
+      }
+      
+      // Create other files in parallel (they don't affect is_main)
+      await Promise.all(otherSnapshots.map(snapshot =>
+        fetch('/api/files/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documentId,
+            filename: snapshot.filename,
+            fileType: snapshot.file_type,
+            content: snapshot.content,
+            isMain: false,
+          }),
+        })
+      ));
+  
+      // Refresh the file list
+      await fetchFiles();
+  
+      console.log('✅ Restored', fileSnapshots.length, 'files from version snapshot');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to restore files';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [documentId, files, fetchFiles]);
+
   // Load files on mount and when documentId changes
   useEffect(() => {
     fetchFiles();
@@ -153,6 +227,7 @@ export function useFileManager(documentId: string | null) {
     createFile,
     updateFile,
     deleteFile,
+    restoreFiles,
     refreshFiles: fetchFiles,
   };
 }
