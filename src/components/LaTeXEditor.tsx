@@ -125,16 +125,19 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   
   // Compile with auto-save wrapper (defined before AI hooks need it)
   const compileWithSave = useCallback(async (content?: string) => {
-    // Force-save active file if there are changes
+    // Only save if there are actual changes
     if (activeFile && editorContent !== activeFile.content) {
-      console.log('💾 Saving before compile');
+      console.log('💾 Saving before compile (content changed)');
       try {
         await fileManager.updateFile(activeFile.id, editorContent);
-        await fileManager.refreshFiles();
+        // Update activeFile to reflect the saved content
+        setActiveFile(prev => prev ? { ...prev, content: editorContent } : null);
       } catch (error) {
         console.error('Error saving before compile:', error);
         return;
       }
+    } else if (activeFile) {
+      console.log('⚡ Skipping save - no changes detected');
     }
     
     const mainFile = fileManager.files.find(f => f.is_main);
@@ -199,6 +202,9 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   useEffect(() => {
     if (isViewingVersion || !activeFile) return;
 
+    // Skip if content hasn't changed
+    if (editorContent === activeFile.content) return;
+
     // Clear any existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -210,6 +216,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
       
       try {
         await fileManager.updateFile(activeFile.id, editorContent);
+        // Update activeFile to reflect the saved content
+        setActiveFile(prev => prev ? { ...prev, content: editorContent } : null);
         console.log('✅ Auto-saved:', activeFile.filename, 'length:', editorContent.length);
       } catch (error) {
         console.error('❌ Save error:', error);
@@ -387,19 +395,38 @@ const handleVersionSelect = (versionId: string) => {
   };
 
 // Handle file selection
-// Handle file selection
-const handleFileSelect = useCallback(async (file: DocumentFile) => {
+const handleFileSelect = useCallback((file: DocumentFile) => {
   // Cancel any pending auto-save
   if (saveTimeoutRef.current) {
     clearTimeout(saveTimeoutRef.current);
   }
   
-  // Force-save current file if there are changes (only when not viewing version)
+  // Optimistic update: Save in background if there are changes (fire and forget)
   if (activeFile && editorContent !== activeFile.content && !isViewingVersion) {
-    console.log('💾 Saving on switch:', activeFile.filename);
-    await fileManager.updateFile(activeFile.id, editorContent);
-    // Refresh files after save to update local cache
-    await fileManager.refreshFiles();
+    const fileToSave = activeFile;
+    const contentToSave = editorContent;
+    
+    console.log('💾 Background save started:', fileToSave.filename);
+    
+    // Fire and forget - save happens in background
+    fileManager.updateFile(fileToSave.id, contentToSave)
+      .then(() => {
+        console.log('✅ Background save complete:', fileToSave.filename);
+        // Update the activeFile content if it's still the same file
+        setActiveFile(prev => 
+          prev && prev.id === fileToSave.id 
+            ? { ...prev, content: contentToSave } 
+            : prev
+        );
+        // Silently refresh cache after save completes
+        return fileManager.refreshFiles();
+      })
+      .catch((error) => {
+        console.error('❌ Background save failed:', error);
+        // Could show a toast notification here
+      });
+  } else if (activeFile) {
+    console.log('⚡ Skipping save on switch - no changes detected');
   }
   
   // If viewing a version, load content from the snapshot instead of current files
@@ -410,7 +437,6 @@ const handleFileSelect = useCallback(async (file: DocumentFile) => {
     
     if (snapshotFile) {
       console.log('📂 Opening snapshot file:', snapshotFile.filename);
-      // Create a temporary DocumentFile object with snapshot content
       const tempFile = { ...file, content: snapshotFile.content };
       setActiveFile(tempFile);
       setEditorContent(snapshotFile.content);
@@ -418,33 +444,15 @@ const handleFileSelect = useCallback(async (file: DocumentFile) => {
     }
   }
   
-  // Normal flow: Fetch fresh file data from database
-  const response = await fetch(`/api/files/list?documentId=${document.id}`);
-  const data = await response.json();
+  // Instant switch: Use cached file from fileManager.files (no API call!)
+  const cachedFile = fileManager.files.find(f => f.id === file.id) || file;
   
-  if (response.ok && data.files) {
-    const freshFile = data.files.find((f: any) => f.id === file.id);
-    if (freshFile) {
-      console.log('📂 Opening file:', freshFile.filename, 'content length:', freshFile.content.length);
-      setActiveFile(freshFile);
-      setEditorContent(freshFile.content);
-      setCurrentEditorContent(freshFile.content);
-    } else {
-      // Fallback to passed file if not found in fresh data (shouldn't happen)
-      console.log('📂 Opening file (fallback):', file.filename);
-      setActiveFile(file);
-      setEditorContent(file.content);
-      setCurrentEditorContent(file.content);
-    }
-  } else {
-    // Fallback if fetch fails
-    const cachedFile = fileManager.files.find(f => f.id === file.id) || file;
-    console.log('📂 Opening file (cached):', cachedFile.filename);
-    setActiveFile(cachedFile);
-    setEditorContent(cachedFile.content);
-    setCurrentEditorContent(cachedFile.content);
-  }
-}, [activeFile, editorContent, isViewingVersion, selectedVersion, fileManager, document.id]);
+  console.log('📂 Opening file:', cachedFile.filename, 'content length:', cachedFile.content.length);
+  
+  setActiveFile(cachedFile);
+  setEditorContent(cachedFile.content);
+  setCurrentEditorContent(cachedFile.content);
+}, [activeFile, editorContent, isViewingVersion, selectedVersion, fileManager]);
 
   const handleChatSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

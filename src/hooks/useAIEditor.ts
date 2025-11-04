@@ -215,14 +215,11 @@ export function useAIEditor(
         
         setCompileError(null);
         setIsApplying(false);
-        
-        // Compile after accepting (not included in loading state)
-        await compileLatex(proposal.newLatexCode);
       } catch (error) {
         setIsApplying(false);
       }
     }
-  }, [aiProposals, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
+  }, [aiProposals, setLatexCode, setCompileError, saveToUndoStack]);
 
   const rejectAIProposal = useCallback((messageId: string) => {
     const proposal = aiProposals[messageId];

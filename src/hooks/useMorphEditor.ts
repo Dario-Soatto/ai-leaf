@@ -259,15 +259,13 @@ export function useMorphEditor(
       }));
 
       setApplyingChangeId(null);
-      
-      await compileLatex(result.mergedCode);
 
     } catch (error) {
       console.error('Error applying change:', error);
       setCompileError(`Failed to apply change: ${change.description}`);
       setApplyingChangeId(null);
     }
-  }, [state.proposedChangesByMessage, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
+  }, [state.proposedChangesByMessage, latexCode, setLatexCode, setCompileError, saveToUndoStack]);
 
   const rejectChange = useCallback((changeId: string) => {
     setState(prev => {
@@ -335,15 +333,13 @@ export function useMorphEditor(
       }));
 
       setIsApplyingAll(false);
-      
-      await compileLatex(currentCode);
 
     } catch (error) {
       console.error('Error applying all changes:', error);
       setCompileError('Failed to apply changes. Please try again.');
       setIsApplyingAll(false);
     }
-  }, [state.proposedChangesByMessage, latexCode, setLatexCode, setPdfUrl, setCompileError, compileLatex, saveToUndoStack]);
+  }, [state.proposedChangesByMessage, latexCode, setLatexCode, setCompileError, saveToUndoStack]);
 
   const rejectAllChanges = useCallback((messageId: string) => {
     setState(prev => ({
