@@ -296,7 +296,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     }
   }, [compileWithSave, pdfCompiler.compileError]);
 
-  // Handle version selection
+// Handle version selection
 const handleVersionSelect = (versionId: string) => {
   if (versionId === 'current') {
     setSelectedVersion(null);
@@ -316,14 +316,21 @@ const handleVersionSelect = (versionId: string) => {
       setSelectedVersion(version);
       setIsViewingVersion(true);
       
-      // If we have file snapshots, show the main file from the snapshot
+      // If we have file snapshots, find the matching file from the snapshot
       if (version.file_snapshots && version.file_snapshots.length > 0) {
-        const mainSnapshot = version.file_snapshots.find(f => f.is_main);
-        if (mainSnapshot && activeFile) {
+        // Try to find the snapshot for the currently active file
+        const matchingSnapshot = activeFile 
+          ? version.file_snapshots.find(f => f.filename === activeFile.filename)
+          : null;
+        
+        // Fall back to main file if current file doesn't exist in this version
+        const snapshotToShow = matchingSnapshot || version.file_snapshots.find(f => f.is_main);
+        
+        if (snapshotToShow && activeFile) {
           // Create a temp file object with snapshot content
-          const tempFile = { ...activeFile, content: mainSnapshot.content };
+          const tempFile = { ...activeFile, content: snapshotToShow.content };
           setActiveFile(tempFile);
-          setEditorContent(mainSnapshot.content);
+          setEditorContent(snapshotToShow.content);
         }
       } else {
         // Fallback for old versions
@@ -393,37 +400,27 @@ const handleVersionSelect = (versionId: string) => {
 
 // Handle file selection
 const handleFileSelect = useCallback((file: DocumentFile) => {
-  // Cancel any pending auto-save
+  // If there's a pending auto-save, trigger it immediately
   if (saveTimeoutRef.current) {
     clearTimeout(saveTimeoutRef.current);
-  }
-  
-  // Optimistic update: Save in background if there are changes (fire and forget)
-  if (activeFile && editorContent !== activeFile.content && !isViewingVersion) {
-    const fileToSave = activeFile;
-    const contentToSave = editorContent;
     
-    console.log('💾 Background save started:', fileToSave.filename);
-    
-    // Fire and forget - save happens in background
-    fileManager.updateFile(fileToSave.id, contentToSave)
-      .then(() => {
-        console.log('✅ Background save complete:', fileToSave.filename);
-        // Update the activeFile content if it's still the same file
-        setActiveFile(prev => 
-          prev && prev.id === fileToSave.id 
-            ? { ...prev, content: contentToSave } 
-            : prev
-        );
-        // Silently refresh cache after save completes
-        return fileManager.refreshFiles();
-      })
-      .catch((error) => {
-        console.error('❌ Background save failed:', error);
-        // Could show a toast notification here
-      });
-  } else if (activeFile) {
-    console.log('⚡ Skipping save on switch - no changes detected');
+    // Trigger immediate save if there are unsaved changes
+    if (activeFile && editorContent !== activeFile.content && !isViewingVersion) {
+      console.log('💾 Immediate save on file switch:', activeFile.filename);
+      fileManager.updateFile(activeFile.id, editorContent)
+        .then(() => {
+          console.log('✅ Save complete:', activeFile.filename);
+          setActiveFile(prev => 
+            prev && prev.id === activeFile.id 
+              ? { ...prev, content: editorContent } 
+              : prev
+          );
+          return fileManager.refreshFiles();
+        })
+        .catch((error) => {
+          console.error('❌ Save failed:', error);
+        });
+    }
   }
   
   // If viewing a version, load content from the snapshot instead of current files

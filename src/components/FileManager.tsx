@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useFileManager, DocumentFile, FileType } from '@/hooks/useFileManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { File, FilePlus, Trash2, Star } from 'lucide-react';
+import { File, FilePlus, Trash2, Star, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 interface FileManagerProps {
   documentId: string;
@@ -50,6 +51,7 @@ export default function FileManager({ documentId, activeFileId, onFileSelect }: 
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newFilename, setNewFilename] = useState('');
   const [newFileType, setNewFileType] = useState<FileType>('tex');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCreateFile = async () => {
     if (!newFilename.trim()) return;
@@ -75,6 +77,52 @@ export default function FileManager({ documentId, activeFileId, onFileSelect }: 
       }
     } catch (err) {
       console.error('Create file failed:', err);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file extension
+    const validExtensions = ['tex', 'bib', 'cls', 'sty', 'bst'];
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (!extension || !validExtensions.includes(extension)) {
+      alert(`Invalid file type. Please upload a ${validExtensions.join(', ')} file.`);
+      return;
+    }
+
+    // Validate file size (max 1MB for text files)
+    const maxSize = 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      alert('File is too large. Maximum size is 1MB.');
+      return;
+    }
+
+    try {
+      // Read file content
+      const content = await file.text();
+      
+      // Create the file using existing function
+      const newFile = await createFile(
+        file.name, 
+        extension as FileType, 
+        content
+      );
+      
+      // Auto-select the new file
+      if (newFile) {
+        onFileSelect(newFile);
+      }
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Failed to upload file. Please try again.');
     }
   };
 
@@ -120,16 +168,39 @@ export default function FileManager({ documentId, activeFileId, onFileSelect }: 
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="p-3 border-b border-gray-700 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-gray-200">Files</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsCreatingNew(!isCreatingNew)}
-          className="h-7 w-7 p-0"
-          title="New File"
-        >
-          <FilePlus className="h-4 w-4" />
-        </Button>
+        <h3 className="text-sm font-semibold text-gray-800">Files</h3>
+        <div className="flex gap-1">
+          {/* Upload button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="h-7 w-7 p-0"
+            title="Upload File"
+          >
+            <Upload className="h-4 w-4" />
+          </Button>
+          
+          {/* Create new button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCreatingNew(!isCreatingNew)}
+            className="h-7 w-7 p-0"
+            title="New File"
+          >
+            <FilePlus className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".tex,.bib,.cls,.sty,.bst"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
       </div>
 
       {/* Error display */}
