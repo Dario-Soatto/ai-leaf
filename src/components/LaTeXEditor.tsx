@@ -8,14 +8,11 @@ import { useAIEditor } from '@/hooks/useAIEditor';
 import { useMorphEditor } from '@/hooks/useMorphEditor';
 import { usePDFCompiler } from '@/hooks/usePDFCompiler';
 import { usePanelResize } from '@/hooks/usePanelResize';
-import MorphProposalPanel from './MorphProposalPanel';
 import MonacoLaTeXEditor from './MonacoLaTeXEditor';
 import { createClient } from '@/lib/supabase';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea'; // ⭐ Add this import
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Select, 
@@ -247,14 +244,14 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
       }
 
       const freshFiles = data.files || [];
-      const mainFile = freshFiles.find((f: any) => f.is_main);
+      const mainFile = freshFiles.find((f: DocumentFile) => f.is_main);
       if (!mainFile) {
         console.error('No main file found when saving version');
         return;
       }
 
       // Capture all current files as a snapshot from fresh database data
-      const fileSnapshots: FileSnapshot[] = freshFiles.map((file: any) => ({
+      const fileSnapshots: FileSnapshot[] = freshFiles.map((file: DocumentFile) => ({
         filename: file.filename,
         file_type: file.file_type,
         content: file.content,
@@ -285,7 +282,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   };
 
   // Handle compile with version saving
-  const handleCompile = async () => {
+  const handleCompile = useCallback(async () => {
     setIsPreparingCompile(true);
     
     try {
@@ -297,7 +294,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     } finally {
       setIsPreparingCompile(false);
     }
-  };
+  }, [compileWithSave, pdfCompiler.compileError]);
 
   // Handle version selection
 const handleVersionSelect = (versionId: string) => {
@@ -365,7 +362,7 @@ const handleVersionSelect = (versionId: string) => {
         const filesData = await filesResponse.json();
         
         if (filesResponse.ok && filesData.files) {
-          const mainFile = filesData.files.find((f: any) => f.is_main);
+          const mainFile = filesData.files.find((f: DocumentFile) => f.is_main);
           if (mainFile) {
             setActiveFile(mainFile);
             setEditorContent(mainFile.content);
