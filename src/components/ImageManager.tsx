@@ -9,10 +9,25 @@ import { Copy, Trash2, Check, FileImage, Upload } from 'lucide-react';
 
 interface ImageManagerProps {
   documentId: string;
+  images: ImageRecord[];
+  isLoading: boolean;
+  isUploading: boolean;
+  error: string | null;
+  uploadImage: (file: File) => Promise<ImageRecord | undefined>;
+  deleteImage: (imageId: string) => Promise<void>;
+  renameImage: (imageId: string, newFilename: string) => Promise<ImageRecord | undefined>;
 }
 
-export default function ImageManager({ documentId }: ImageManagerProps) {
-  const { images, isLoading, isUploading, error, uploadImage, deleteImage, renameImage } = useImageManager(documentId);
+export default function ImageManager({ 
+  documentId,
+  images,
+  isLoading,
+  isUploading,
+  error,
+  uploadImage,
+  deleteImage,
+  renameImage
+}: ImageManagerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);

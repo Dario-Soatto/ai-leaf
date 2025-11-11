@@ -82,8 +82,13 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   const [selectedVersion, setSelectedVersion] = useState<Version | null>(null);
   const [isViewingVersion, setIsViewingVersion] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { images } = useImageManager(document.id);
-  const availableImageFilenames = images.map(img => img.filename);
+  const imageManager = useImageManager(document.id);
+  const availableImageFilenames = imageManager.images.map(img => img.filename);
+  console.log('DEBUG images:', imageManager.images);
+  console.log('DEBUG availableImageFilenames:', availableImageFilenames);
+  useEffect(() => {
+    console.log('Images changed!', availableImageFilenames);
+  }, [imageManager.images]);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
   const handleFixError = () => {
@@ -122,6 +127,9 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   
   // Compile with auto-save wrapper (defined before AI hooks need it)
   const compileWithSave = useCallback(async (content?: string) => {
+    // Determine what content to compile (use passed content or current editor)
+    const contentToCompile = content || editorContent;
+    
     // Only save if there are actual changes
     if (activeFile && editorContent !== activeFile.content) {
       console.log('💾 Saving before compile (content changed)');
@@ -137,16 +145,24 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
       console.log('⚡ Skipping save - no changes detected');
     }
     
-    const mainFile = fileManager.files.find(f => f.is_main);
-    if (!mainFile) {
-      console.error('No main file found');
-      return;
+    // Check if current file is the main file
+    if (!activeFile?.is_main) {
+      // If we're not editing the main file, we need to get the main file content
+      const mainFile = fileManager.files.find(f => f.is_main);
+      if (!mainFile) {
+        console.error('No main file found');
+        return;
+      }
+      // Compile the main file (not the current file)
+      await pdfCompiler.compileLatex(mainFile.content);
+    } else {
+      // We're editing the main file, so compile with our current/saved content
+      await pdfCompiler.compileLatex(contentToCompile);
     }
-
-    await pdfCompiler.compileLatex(content || mainFile.content);
   }, [activeFile, editorContent, fileManager, pdfCompiler]);
   
   // AI editing hooks - work with the active file's content
+  console.log('Creating AI hooks with images:', availableImageFilenames);
   const aiEditor = useAIEditor(
     editorContent, 
     setEditorContent, 
@@ -774,7 +790,16 @@ const handleFileSelect = useCallback((file: DocumentFile) => {
                   />
                 )}
                 {showImageManager && (
-                  <ImageManager documentId={document.id} />
+                  <ImageManager 
+                  documentId={document.id}
+                  images={imageManager.images}
+                  isLoading={imageManager.isLoading}
+                  isUploading={imageManager.isUploading}
+                  error={imageManager.error}
+                  uploadImage={imageManager.uploadImage}
+                  deleteImage={imageManager.deleteImage}
+                  renameImage={imageManager.renameImage}
+                />
                 )}
               </div>
             </div>

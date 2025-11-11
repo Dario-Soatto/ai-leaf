@@ -34,6 +34,7 @@ export function useImageManager(documentId: string | null) {
       }
 
       setImages(data.images || []);
+      console.log('useImageManager setImages called:', data.images?.length || 0, 'images');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch images');
       console.error('Error fetching images:', err);
@@ -69,6 +70,7 @@ export function useImageManager(documentId: string | null) {
 
       // Refresh the image list
       await fetchImages();
+      console.log('uploadImage: fetchImages completed');
 
       return data.image;
     } catch (err) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import sharp from 'sharp';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -127,13 +128,32 @@ export async function POST(request: NextRequest) {
             console.error(`Error downloading ${filename}:`, downloadError);
             continue; // Skip this image, let LaTeX show the error
           }
+          const arrayBuffer = await imageData.arrayBuffer();
 
-          // Add to form data
-          const blob = new Blob([await imageData.arrayBuffer()]);
-          formData.append('filename[]', filename);
-          formData.append('filecontents[]', blob);
-          
-          console.log(`Added image to submission: ${filename}`);
+          // Workaround: Convert PNGs to JPEG due to texlive.net corruption bug
+          if (filename.toLowerCase().endsWith('.png')) {
+            console.log(`Converting PNG to JPEG: ${filename}`);
+            
+            try {
+              const jpegBuffer = await sharp(arrayBuffer)
+                .jpeg({ quality: 95 })
+                .toBuffer();
+              
+              const jpegBlob = new Blob([new Uint8Array(jpegBuffer)], { type: 'image/jpeg' });              formData.append('filename[]', filename);
+              formData.append('filecontents[]', jpegBlob, filename);
+              
+              console.log(`Converted ${filename}: PNG ${arrayBuffer.byteLength} bytes -> JPEG ${jpegBuffer.length} bytes`);
+            } catch (conversionError) {
+              console.error(`Failed to convert ${filename}:`, conversionError);
+              continue;
+            }
+          } else {
+            // JPEGs and other formats work as-is
+            const blob = new Blob([arrayBuffer], { type: imageRecord.mime_type });
+            formData.append('filename[]', filename);
+            formData.append('filecontents[]', blob, filename);
+            console.log(`Added image to submission: ${filename}`);
+          }
         } else {
           console.warn(`Image referenced but not found: ${filename}`);
           // Continue anyway - LaTeX will show the error
