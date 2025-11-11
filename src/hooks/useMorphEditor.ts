@@ -15,7 +15,8 @@ export function useMorphEditor(
   setCompileError: (error: string | null) => void,
   compileLatex: (code: string) => Promise<void>,
   saveToUndoStack: () => void,
-  availableImages?: string[]  // Add this parameter
+  availableImages?: string[],
+  allFiles?: Array<{ filename: string; content: string; is_main: boolean }>  // ✅ ADD THIS
 ) {
   // ⭐ CHANGE: Store proposals per message ID
   const [state, setState] = useState<{
@@ -76,7 +77,8 @@ export function useMorphEditor(
           currentLatex: latexCode, 
           userRequest,
           chatHistory: chatHistoryForContext,
-          availableImages: availableImages || []  // Add this
+          availableImages: availableImages || [],
+          allFiles: allFiles || []  // ✅ ADD THIS
         } as MorphEditRequest),
       });
   
@@ -205,7 +207,7 @@ export function useMorphEditor(
       setState(prev => ({ ...prev, isProcessing: false }));
       console.log('[Frontend Morph] Processing complete');
     }
-  }, [latexCode, state.chatMessages, availableImages]);
+  }, [latexCode, state.chatMessages, availableImages, allFiles]);
 
   const applyChange = useCallback(async (changeId: string) => {
     // ⭐ Find the change across all messages

@@ -163,6 +163,7 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   
   // AI editing hooks - work with the active file's content
   console.log('Creating AI hooks with images:', availableImageFilenames);
+  console.log('Creating AI hooks with images:', availableImageFilenames);
   const aiEditor = useAIEditor(
     editorContent, 
     setEditorContent, 
@@ -170,7 +171,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     pdfCompiler.setCompileError, 
     compileWithSave,
     saveToUndoStack,
-    availableImageFilenames
+    availableImageFilenames,
+    fileManager.files  // ✅ ADD THIS - pass all files
   );
   const morphEditor = useMorphEditor(
     editorContent, 
@@ -179,7 +181,8 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     pdfCompiler.setCompileError, 
     compileWithSave,
     saveToUndoStack,
-    availableImageFilenames
+    availableImageFilenames,
+    fileManager.files  // ✅ ADD THIS - pass all files
   );
 
   // Initialize active file when files load

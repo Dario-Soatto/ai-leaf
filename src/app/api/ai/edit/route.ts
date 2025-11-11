@@ -13,7 +13,7 @@ const LaTeXEditResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { currentLatex, userRequest, chatHistory, availableImages } = body;
+    const { currentLatex, userRequest, chatHistory, availableImages, allFiles } = body;
 
     // Validate input
     if (!currentLatex || !userRequest) {
@@ -48,34 +48,45 @@ export async function POST(request: NextRequest) {
         '\n\nYou can reference these images using \\includegraphics{filename}';
     }
 
+    let filesContext = '';
+    if (allFiles && Array.isArray(allFiles) && allFiles.length > 0) {
+      filesContext = '\n\nDocument files:\n' + 
+        allFiles.map((file: { filename: string; content: string; is_main: boolean }) => 
+          `--- ${file.filename} ${file.is_main ? '(MAIN FILE - currently editing)' : '(auxiliary file)'} ---\n\`\`\`latex\n${file.content}\n\`\`\`\n`
+        ).join('\n');
+    }
+
     // Call streamObject
     const result = streamObject({
       model: anthropic('claude-sonnet-4-20250514'),
       schema: LaTeXEditResponseSchema,
       prompt: `You are a LaTeX expert. The user wants to modify their LaTeX document.
-
-Current LaTeX document:
-\`\`\`latex
-${currentLatex}
-\`\`\`
-${conversationContext}
-${imagesContext}
-
-User request: "${userRequest}"
-
-Please modify the LaTeX document according to the user's request. Return the complete modified document.
-
-Guidelines:
-- Maintain proper LaTeX structure and syntax
-- Add necessary packages if required (e.g., \\usepackage{graphicx} for images)
-- Ensure the document compiles correctly
-- Make only the requested changes
-- Preserve existing content unless specifically asked to modify it
-- Use proper LaTeX formatting and environments
-- Consider the conversation context when interpreting requests
-- When using images, only reference files from the available images list
-
-Return the complete modified LaTeX document.`
+    
+    Current LaTeX document (main file being edited):
+    \`\`\`latex
+    ${currentLatex}
+    \`\`\`
+    ${filesContext}
+    ${conversationContext}
+    ${imagesContext}
+    
+    User request: "${userRequest}"
+    
+    Please modify the LaTeX document according to the user's request. Return the complete modified MAIN FILE document.
+    
+    Guidelines:
+    - Maintain proper LaTeX structure and syntax
+    - Add necessary packages if required (e.g., \\usepackage{graphicx} for images)
+    - Ensure the document compiles correctly
+    - Make only the requested changes
+    - Preserve existing content unless specifically asked to modify it
+    - Use proper LaTeX formatting and environments
+    - Consider the conversation context when interpreting requests
+    - When using images, only reference files from the available images list
+    - You can reference auxiliary files (e.g., \\input{filename.tex}, \\bibliography{refs.bib})
+    - IMPORTANT: Only return the modified MAIN FILE content, not the auxiliary files
+    
+    Return the complete modified LaTeX document for the MAIN FILE.`
     });
 
     console.log('[Backend] streamObject created, starting to iterate...');

@@ -29,6 +29,9 @@ export interface ChatMessage {
 export interface MorphEditRequest {
   currentLatex: string;
   userRequest: string;
+  chatHistory?: Array<{ type: string; content: string }>;
+  availableImages?: string[];
+  allFiles?: Array<{ filename: string; content: string; is_main: boolean }>;  // ✅ ADD THIS
 }
 
 export interface MorphEditResponse {

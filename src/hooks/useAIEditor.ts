@@ -23,7 +23,8 @@ export function useAIEditor(
   setCompileError: (error: string | null) => void,
   compileLatex: (code: string) => Promise<void>,
   saveToUndoStack: () => void,
-  availableImages?: string[]  // Add this parameter
+  availableImages?: string[],
+  allFiles?: Array<{ filename: string; content: string; is_main: boolean }>  // ✅ ADD THIS
 ) {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
@@ -70,7 +71,8 @@ export function useAIEditor(
           currentLatex: latexCode, 
           userRequest,
           chatHistory: chatHistoryForContext,
-          availableImages: availableImages || []  // Add this
+          availableImages: availableImages || [],
+          allFiles: allFiles || []  // ✅ ADD THIS
         }),
       });
 
@@ -195,7 +197,7 @@ export function useAIEditor(
       setIsAIProcessing(false);
       console.log('[Frontend] Processing complete');
     }
-  }, [latexCode, chatMessages, availableImages]);
+  }, [latexCode, chatMessages, availableImages, allFiles]);
 
   const acceptAIProposal = useCallback(async (messageId: string) => {
     const proposal = aiProposals[messageId];

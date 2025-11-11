@@ -22,7 +22,7 @@ const MorphEditResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { currentLatex, userRequest, chatHistory, availableImages } = body;
+    const { currentLatex, userRequest, chatHistory, availableImages, allFiles } = body;
 
     // Validate input
     if (!currentLatex || !userRequest) {
@@ -57,67 +57,78 @@ export async function POST(request: NextRequest) {
         '\n\nYou can reference these images using \\includegraphics{filename}';
     }
 
+    let filesContext = '';
+    if (allFiles && Array.isArray(allFiles) && allFiles.length > 0) {
+      filesContext = '\n\nDocument files:\n' + 
+        allFiles.map((file: { filename: string; content: string; is_main: boolean }) => 
+          `--- ${file.filename} ${file.is_main ? '(MAIN FILE - currently editing)' : '(auxiliary file)'} ---\n\`\`\`latex\n${file.content}\n\`\`\`\n`
+        ).join('\n');
+    }
+
     // Call streamObject
     const result = streamObject({
       model: anthropic('claude-sonnet-4-20250514'),
       schema: MorphEditResponseSchema,
       prompt: `You are a LaTeX expert. The user wants to modify their LaTeX document.
-
-Current LaTeX document:
-\`\`\`latex
-${currentLatex}
-\`\`\`
-${conversationContext}
-${imagesContext}
-
-ser request: "${userRequest}"
-
-Please generate specific changes for the LaTeX document. For each change, provide:
-1. A clear description of what the change does
-2. The edit snippet in Morph format with SUFFICIENT CONTEXT
-3. Your confidence level (0-1)
-
-CRITICAL: Include enough surrounding code for MorphLLM to uniquely identify the location.
-
-Morph Format Rules:
-- Include 2-3 lines of ACTUAL CODE before the change (not just // ... existing code ...)
-- Include 2-3 lines of ACTUAL CODE after the change
-- Use // ... existing code ... only at the START and END to indicate distant sections
-- The surrounding code must be unique enough to locate the edit position
-
-GOOD Example (sufficient context):
-\`\`\`
-// ... existing code ...
-\\section{Introduction}
-This paper explores...
-
-\\section{New Section}
-This is new content I'm adding.
-
-\\section{Methods}
-We used the following...
-// ... existing code ...
-\`\`\`
-
-BAD Example (insufficient context):
-\`\`\`
-// ... existing code ...
-\\section{New Section}
-This is new content.
-// ... existing code ...
-\`\`\`
-
-Guidelines:
-- Break down complex requests into individual, logical changes
-- Each change should be self-contained and independently applicable
-- Provide CONCRETE surrounding lines, not just markers
-- Include enough context that a human could find the location by searching
-- Make sure each change has a clear, specific purpose
-- Consider the conversation context when interpreting requests
-- When using images, only reference files from the available images list
-- Add \\usepackage{graphicx} if suggesting image usage and it's not already present
-
-Return multiple individual changes that can be applied separately.`
+    
+    Current LaTeX document (main file being edited):
+    \`\`\`latex
+    ${currentLatex}
+    \`\`\`
+    ${filesContext}
+    ${conversationContext}
+    ${imagesContext}
+    
+    User request: "${userRequest}"
+    
+    Please generate specific changes for the LaTeX document. For each change, provide:
+    1. A clear description of what the change does
+    2. The edit snippet in Morph format with SUFFICIENT CONTEXT
+    3. Your confidence level (0-1)
+    
+    CRITICAL: Include enough surrounding code for MorphLLM to uniquely identify the location.
+    
+    Morph Format Rules:
+    - Include 2-3 lines of ACTUAL CODE before the change (not just // ... existing code ...)
+    - Include 2-3 lines of ACTUAL CODE after the change
+    - Use // ... existing code ... only at the START and END to indicate distant sections
+    - The surrounding code must be unique enough to locate the edit position
+    
+    GOOD Example (sufficient context):
+    \`\`\`
+    // ... existing code ...
+    \\section{Introduction}
+    This paper explores...
+    
+    \\section{New Section}
+    This is new content I'm adding.
+    
+    \\section{Methods}
+    We used the following...
+    // ... existing code ...
+    \`\`\`
+    
+    BAD Example (insufficient context):
+    \`\`\`
+    // ... existing code ...
+    \\section{New Section}
+    This is new content.
+    // ... existing code ...
+    \`\`\`
+    
+    Guidelines:
+    - Break down complex requests into individual, logical changes
+    - Each change should be self-contained and independently applicable
+    - Provide CONCRETE surrounding lines, not just markers
+    - Include enough context that a human could find the location by searching
+    - Make sure each change has a clear, specific purpose
+    - Consider the conversation context when interpreting requests
+    - When using images, only reference files from the available images list
+    - Add \\usepackage{graphicx} if suggesting image usage and it's not already present
+    - You can reference auxiliary files in the main document
+    - IMPORTANT: Changes should only be for the MAIN FILE being edited
+    
+    Return multiple individual changes that can be applied separately to the MAIN FILE.`
     });
 
     
