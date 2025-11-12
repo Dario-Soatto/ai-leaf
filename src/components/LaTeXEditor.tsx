@@ -126,7 +126,19 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
   const isCompiling = isPreparingCompile || pdfCompiler.isCompiling;
   
   // Compile with auto-save wrapper (defined before AI hooks need it)
-  const compileWithSave = useCallback(async (content?: string) => {
+  const compileWithSave = useCallback(async (content?: string, versionSnapshots?: FileSnapshot[]) => {
+    // If compiling a version, skip saving and use snapshots
+    if (versionSnapshots && versionSnapshots.length > 0) {
+      const mainSnapshot = versionSnapshots.find(f => f.is_main);
+      if (!mainSnapshot) {
+        console.error('No main file in version snapshots');
+        return;
+      }
+      console.log('📜 Compiling version with', versionSnapshots.length, 'files');
+      await pdfCompiler.compileLatex(mainSnapshot.content, versionSnapshots);
+      return;
+    }
+    
     // Determine what content to compile (use passed content or current editor)
     const contentToCompile = content || editorContent;
     
@@ -305,15 +317,23 @@ export default function LaTeXEditor({ document }: LaTeXEditorProps) {
     setIsPreparingCompile(true);
     
     try {
-      await compileWithSave();
-      
-      if (!pdfCompiler.compileError) {
-        await saveVersion();
+      // If viewing a version, compile the snapshot
+      if (isViewingVersion && selectedVersion?.file_snapshots) {
+        console.log('📜 Compiling historical version');
+        await compileWithSave(undefined, selectedVersion.file_snapshots);
+      } else {
+        // Normal compile: save current state and compile
+        await compileWithSave();
+        
+        // Save version only if compilation succeeded
+        if (!pdfCompiler.compileError) {
+          await saveVersion();
+        }
       }
     } finally {
       setIsPreparingCompile(false);
     }
-  }, [compileWithSave, pdfCompiler.compileError]);
+  }, [isViewingVersion, selectedVersion, compileWithSave, pdfCompiler.compileError, saveVersion]);
 
 // Handle version selection
 const handleVersionSelect = (versionId: string) => {

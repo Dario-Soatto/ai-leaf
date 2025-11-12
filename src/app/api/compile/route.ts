@@ -29,7 +29,7 @@ function extractImageFilenames(latexCode: string): string[] {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { latex, documentId } = body;
+    const { latex, documentId, fileSnapshots } = body;
 
     if (!latex || typeof latex !== 'string') {
       return NextResponse.json(
@@ -47,8 +47,20 @@ export async function POST(request: NextRequest) {
     // Required: return parameter (pdf to get the PDF directly)
     formData.append('return', 'pdf');
 
+    // If fileSnapshots provided (version viewing), use those
+    if (fileSnapshots && Array.isArray(fileSnapshots) && fileSnapshots.length > 0) {
+      console.log('Using provided file snapshots for compilation...');
+      
+      for (const file of fileSnapshots) {
+        const content = file.is_main ? `\\nonstopmode\n${file.content}` : file.content;
+        const filename = file.is_main ? 'document.tex' : file.filename;
+        formData.append('filename[]', filename);
+        formData.append('filecontents[]', content);
+        console.log(`Added snapshot file to submission: ${filename}`);
+      }
+    }
     // Fetch and add all document files if documentId is provided
-    if (documentId) {
+    else if (documentId) {
       console.log('Fetching document files from Supabase...');
       
       const { data: files, error: filesError } = await supabase
@@ -89,7 +101,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract image filenames from the main LaTeX file for image fetching
-    const imageFilenames = extractImageFilenames(latex);
+    let imageFilenames: string[] = [];
+    
+    if (fileSnapshots && Array.isArray(fileSnapshots)) {
+      const mainSnapshot = fileSnapshots.find((f: any) => f.is_main);
+      imageFilenames = mainSnapshot ? extractImageFilenames(mainSnapshot.content) : [];
+    } else {
+      imageFilenames = extractImageFilenames(latex);
+    }
+    
     console.log('Found image references:', imageFilenames);
 
     // Fetch and add images if there are any

@@ -35,7 +35,7 @@ export function useMorphEditor(
         timestamp: new Date()
       }
     ],
-    currentLatex: latexCode
+    currentLatex: latexCode                                                                                                               
   });
 
   const [applyingChangeId, setApplyingChangeId] = useState<string | null>(null);

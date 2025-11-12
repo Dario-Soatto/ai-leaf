@@ -5,7 +5,10 @@ export function usePDFCompiler(documentId?: string) {  // Add documentId paramet
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
 
-  const compileLatex = useCallback(async (latexCode: string) => {
+  const compileLatex = useCallback(async (
+    latexCode: string, 
+    fileSnapshots?: Array<{filename: string; content: string; is_main: boolean; file_type: string}>
+  ) => {
     if (!latexCode.trim()) {
       setCompileError('Please enter some LaTeX code to compile');
       return;
@@ -21,7 +24,8 @@ export function usePDFCompiler(documentId?: string) {  // Add documentId paramet
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           latex: latexCode,
-          documentId: documentId  // Pass documentId
+          documentId: documentId,  // Pass documentId
+          fileSnapshots: fileSnapshots  // Pass snapshots if provided
         }),
       });
 
