@@ -104,8 +104,7 @@ export async function POST(request: NextRequest) {
     let imageFilenames: string[] = [];
     
     if (fileSnapshots && Array.isArray(fileSnapshots)) {
-      const mainSnapshot = fileSnapshots.find((f: any) => f.is_main);
-      imageFilenames = mainSnapshot ? extractImageFilenames(mainSnapshot.content) : [];
+      const mainSnapshot = fileSnapshots.find((f: {is_main: boolean; content: string}) => f.is_main);      imageFilenames = mainSnapshot ? extractImageFilenames(mainSnapshot.content) : [];
     } else {
       imageFilenames = extractImageFilenames(latex);
     }
